@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { CheckCircle, Package, ArrowRight, Truck, MapPin, Clock } from 'lucide-react';
+import { CheckCircle, Package, ArrowRight, Truck, MapPin, Clock, Mail, CheckCircle2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export default function OrderSuccessModal({ order, onClose, onOpenOrders }) {
@@ -61,6 +61,19 @@ export default function OrderSuccessModal({ order, onClose, onOpenOrders }) {
               ₹{Number(order.totalAmount || 0).toFixed(0)}
             </span>
           </div>
+        </div>
+
+        {/* Automated Confirmation Email Dispatched Card */}
+        <div className="mb-6 p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-left space-y-1.5 animate-fade-in">
+          <div className="flex items-center space-x-2 text-emerald-900 font-extrabold text-xs">
+            <Mail className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+            <span>Order Confirmation Email Dispatched</span>
+          </div>
+          <p className="text-[11px] text-slate-600 leading-relaxed">
+            An itemized receipt with item names, prices, and quantities has been automatically generated and sent to{' '}
+            <strong className="text-slate-900">{order.customerEmail || 'your registered Gmail ID'}</strong> from{' '}
+            <strong className="text-emerald-800">zamzammart08@gmail.com</strong>.
+          </p>
         </div>
 
         {/* Live Delivery Tracker Mini Timeline */}

@@ -37,8 +37,26 @@ export default function App() {
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [successOrder, setSuccessOrder] = useState(null);
 
+  // Reset password URL query params
+  const [initialResetToken, setInitialResetToken] = useState(null);
+  const [initialResetEmail, setInitialResetEmail] = useState('');
+
   useEffect(() => {
     loadStoreData();
+
+    // Detect resetToken in query params (?resetToken=...&email=...)
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('resetToken') || params.get('token');
+      const email = params.get('email');
+      if (token) {
+        setInitialResetToken(token);
+        setInitialResetEmail(email || '');
+        setIsAuthOpen(true);
+      }
+    } catch (e) {
+      // ignore
+    }
   }, []);
 
   const loadStoreData = async () => {
@@ -251,7 +269,16 @@ export default function App() {
       {/* Auth Modal */}
       <AuthModal
         isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
+        onClose={() => {
+          setIsAuthOpen(false);
+          setInitialResetToken(null);
+          setInitialResetEmail('');
+          if (window.location.search.includes('resetToken') || window.location.search.includes('token')) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+        }}
+        initialResetToken={initialResetToken}
+        initialResetEmail={initialResetEmail}
       />
 
       {/* Orders Tracking Modal */}

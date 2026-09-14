@@ -30,6 +30,9 @@ public class User {
     private LocalDateTime createdAt = LocalDateTime.now();
     private boolean welcomed = false;
 
+    private String resetPasswordToken;
+    private LocalDateTime resetPasswordExpiry;
+
     public User() {
     }
 
@@ -113,6 +116,22 @@ public class User {
 
     public void setWelcomed(boolean welcomed) {
         this.welcomed = welcomed;
+    }
+
+    public String getResetPasswordToken() {
+        return resetPasswordToken;
+    }
+
+    public void setResetPasswordToken(String resetPasswordToken) {
+        this.resetPasswordToken = resetPasswordToken;
+    }
+
+    public LocalDateTime getResetPasswordExpiry() {
+        return resetPasswordExpiry;
+    }
+
+    public void setResetPasswordExpiry(LocalDateTime resetPasswordExpiry) {
+        this.resetPasswordExpiry = resetPasswordExpiry;
     }
 }
 

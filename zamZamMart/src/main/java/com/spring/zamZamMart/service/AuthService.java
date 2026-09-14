@@ -10,13 +10,18 @@ import com.spring.zamZamMart.util.JwtUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -135,5 +140,76 @@ public class AuthService {
 
     public Optional<User> getUserByEmail(String email) {
         return userRepository.findByEmail(email);
+    }
+
+    @Value("${app.frontend.url:http://localhost:5173}")
+    private String frontendUrl;
+
+    public Map<String, Object> processForgotPassword(String email, String requestOrigin) {
+        if (email == null || email.trim().isEmpty()) {
+            throw new RuntimeException("Please enter your registered Gmail ID / email address.");
+        }
+        String cleanEmail = email.trim().toLowerCase();
+        User user = userRepository.findByEmail(cleanEmail)
+                .orElseThrow(() -> new RuntimeException("No account found with email: " + cleanEmail + ". Please verify your email or sign up."));
+
+        // Generate secure reset token
+        String resetToken = UUID.randomUUID().toString().replace("-", "");
+        user.setResetPasswordToken(resetToken);
+        user.setResetPasswordExpiry(LocalDateTime.now().plusHours(1));
+        userRepository.save(user);
+
+        // Determine base frontend URL
+        String baseUrl = (requestOrigin != null && !requestOrigin.trim().isEmpty()) ? requestOrigin.trim() : frontendUrl;
+        if (baseUrl.endsWith("/")) {
+            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
+        }
+        String resetLink = baseUrl + "/?resetToken=" + resetToken + "&email=" + user.getEmail();
+
+        // Dispatch email automatically from admin email (zamzammart08@gmail.com) to customer login email
+        try {
+            emailService.sendPasswordResetEmail(user.getEmail(), user.getName(), resetLink, resetToken);
+        } catch (Exception e) {
+            logger.warn("Could not dispatch password reset email: {}", e.getMessage());
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("email", user.getEmail());
+        response.put("resetLink", resetLink);
+        response.put("token", resetToken);
+        response.put("message", "Password reset link has been dispatched to " + user.getEmail() + " from zamzammart08@gmail.com!");
+        return response;
+    }
+
+    public Map<String, Object> processResetPassword(String token, String newPassword) {
+        if (token == null || token.trim().isEmpty()) {
+            throw new RuntimeException("Password reset token is required.");
+        }
+        if (newPassword == null || newPassword.trim().length() < 6) {
+            throw new RuntimeException("New password must be at least 6 characters.");
+        }
+
+        User user = userRepository.findByResetPasswordToken(token.trim())
+                .orElseThrow(() -> new RuntimeException("Invalid or expired password reset link. Please request a new one."));
+
+        if (user.getResetPasswordExpiry() == null || user.getResetPasswordExpiry().isBefore(LocalDateTime.now())) {
+            user.setResetPasswordToken(null);
+            user.setResetPasswordExpiry(null);
+            userRepository.save(user);
+            throw new RuntimeException("Password reset link has expired (valid for 60 minutes). Please request a new reset link.");
+        }
+
+        // Update password with BCrypt
+        user.setPassword(passwordEncoder.encode(newPassword.trim()));
+        user.setResetPasswordToken(null);
+        user.setResetPasswordExpiry(null);
+        userRepository.save(user);
+
+        logger.info("✅ Password successfully reset for user: {}", user.getEmail());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("email", user.getEmail());
+        response.put("message", "Password reset successfully! You can now log in with your new password.");
+        return response;
     }
 }

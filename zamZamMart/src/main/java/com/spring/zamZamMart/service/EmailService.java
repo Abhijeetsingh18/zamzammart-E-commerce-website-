@@ -1,5 +1,6 @@
 package com.spring.zamZamMart.service;
 
+import com.spring.zamZamMart.dto.EmailRecordDto;
 import com.spring.zamZamMart.entity.Order;
 import com.spring.zamZamMart.entity.OrderItem;
 import jakarta.mail.internet.MimeMessage;
@@ -14,6 +15,10 @@ import org.springframework.stereotype.Service;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
 
 @Service
 public class EmailService {
@@ -26,8 +31,11 @@ public class EmailService {
     @Value("${spring.mail.username:zamzammart08@gmail.com}")
     private String senderEmail;
 
-    @Value("${spring.mail.password:YOUR_GMAIL_APP_PASSWORD}")
+    @Value("${spring.mail.password:abhijeet@7890}")
     private String mailPassword;
+
+    // In-memory record of all generated emails for audit & UI preview
+    private final List<EmailRecordDto> recentEmails = new CopyOnWriteArrayList<>();
 
     /**
      * Sends a warm Greeting / Welcome Email from Admin Gmail (zamzammart08@gmail.com)
@@ -55,7 +63,17 @@ public class EmailService {
         logger.info("Customer Support: {}", senderEmail);
         logger.info("================================================================================");
 
-        if (mailSender != null && !"YOUR_GMAIL_APP_PASSWORD".equalsIgnoreCase(mailPassword)) {
+        recordEmail(new EmailRecordDto(
+                UUID.randomUUID().toString(),
+                "WELCOME",
+                senderEmail,
+                customerEmail,
+                "🌟 Welcome to ZamZam Mart, " + displayName + "! 100% Certified ZamZam Groceries",
+                "Assalamu Alaikum, " + displayName + "! Your ZamZam Mart account is active. Use code ZAMZAM10 for 10% OFF!",
+                htmlContent
+        ));
+
+        if (mailSender != null && mailPassword != null && !mailPassword.trim().isEmpty() && !"YOUR_GMAIL_APP_PASSWORD".equalsIgnoreCase(mailPassword)) {
             try {
                 MimeMessage message = mailSender.createMimeMessage();
                 MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -109,7 +127,17 @@ public class EmailService {
         }
         logger.info("================================================================================");
 
-        if (mailSender != null && !"YOUR_GMAIL_APP_PASSWORD".equalsIgnoreCase(mailPassword)) {
+        recordEmail(new EmailRecordDto(
+                UUID.randomUUID().toString(),
+                "ORDER_CONFIRMATION",
+                senderEmail,
+                recipient,
+                "🛒 Order Confirmed! ZamZam Mart Invoice #" + order.getOrderNumber(),
+                "Order #" + order.getOrderNumber() + " confirmed. Total: ₹" + order.getTotalAmount() + ". Delivery: " + order.getDeliverySlot(),
+                htmlContent
+        ));
+
+        if (mailSender != null && mailPassword != null && !mailPassword.trim().isEmpty() && !"YOUR_GMAIL_APP_PASSWORD".equalsIgnoreCase(mailPassword)) {
             try {
                 MimeMessage message = mailSender.createMimeMessage();
                 MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -290,5 +318,139 @@ public class EmailService {
             senderEmail,
             year
         );
+    }
+
+    /**
+     * Sends a Password Reset Link Email from Admin Gmail (zamzammart08@gmail.com)
+     * to customer login ID automatically.
+     */
+    @Async
+    public void sendPasswordResetEmail(String recipientEmail, String customerName, String resetLink, String token) {
+        if (recipientEmail == null || recipientEmail.trim().isEmpty()) {
+            logger.warn("Cannot send password reset email: empty recipient");
+            return;
+        }
+
+        String displayName = (customerName != null && !customerName.trim().isEmpty())
+                ? customerName.trim()
+                : recipientEmail.split("@")[0];
+
+        String htmlContent = buildPasswordResetEmailHtml(displayName, recipientEmail, resetLink, token);
+
+        logger.info("================================================================================");
+        logger.info("🔐 [PASSWORD RESET LINK EMAIL]");
+        logger.info("From (Admin Gmail): {}", senderEmail);
+        logger.info("To (Customer Login Gmail ID): {}", recipientEmail);
+        logger.info("Subject: 🔐 Reset Your ZamZam Mart Password");
+        logger.info("Customer Name: {}", displayName);
+        logger.info("Reset Password Link: {}", resetLink);
+        logger.info("Reset Token: {}", token);
+        logger.info("Validity: 60 minutes");
+        logger.info("Customer Support: {}", senderEmail);
+        logger.info("================================================================================");
+
+        recordEmail(new EmailRecordDto(
+                UUID.randomUUID().toString(),
+                "PASSWORD_RESET",
+                senderEmail,
+                recipientEmail,
+                "🔐 Reset Your ZamZam Mart Password",
+                "Password reset link requested for " + recipientEmail + ". Valid for 60 minutes.",
+                htmlContent
+        ));
+
+        if (mailSender != null && mailPassword != null && !mailPassword.trim().isEmpty() && !"YOUR_GMAIL_APP_PASSWORD".equalsIgnoreCase(mailPassword)) {
+            try {
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+                helper.setFrom(senderEmail, "ZamZam Mart Security Team");
+                helper.setTo(recipientEmail);
+                helper.setSubject("🔐 Reset Your ZamZam Mart Password");
+                helper.setText(htmlContent, true);
+
+                mailSender.send(message);
+                logger.info("✅ Password reset email successfully dispatched via Gmail SMTP to {}", recipientEmail);
+            } catch (Exception e) {
+                logger.warn("Live Gmail SMTP dispatch deferred (Set 16-digit Google App Password): {}", e.getMessage());
+            }
+        }
+    }
+
+    private String buildPasswordResetEmailHtml(String customerName, String recipientEmail, String resetLink, String token) {
+        String year = new SimpleDateFormat("yyyy").format(new Date());
+        return String.format("""
+            <!DOCTYPE html>
+            <html>
+            <head><meta charset="utf-8"></head>
+            <body style="font-family: 'Segoe UI', Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px;">
+                <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+                    <!-- Header -->
+                    <div style="background: linear-gradient(135deg, #064e3b 0%%, #047857 100%%); padding: 32px 24px; text-align: center; color: #ffffff;">
+                        <h1 style="margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">ZamZam <span style="color: #6ee7b7;">Mart</span></h1>
+                        <p style="margin: 6px 0 0 0; font-size: 13px; color: #a7f3d0; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Pure • Fresh • 100%% Certified ZamZam</p>
+                    </div>
+
+                    <!-- Reset Password Card -->
+                    <div style="padding: 32px 24px; text-align: center; border-bottom: 1px solid #f1f5f9;">
+                        <div style="display: inline-block; background-color: #eff6ff; color: #2563eb; font-weight: 800; padding: 8px 20px; border-radius: 24px; font-size: 14px; margin-bottom: 16px; border: 1px solid #bfdbfe;">
+                            🔐 Password Reset Request
+                        </div>
+                        <h2 style="margin: 0; font-size: 22px; color: #0f172a;">Assalamu Alaikum, %s!</h2>
+                        <p style="margin: 12px 0 0 0; font-size: 14px; color: #475569; line-height: 1.6;">
+                            We received a request to reset the password for your ZamZam Mart customer account (<strong>%s</strong>).
+                        </p>
+                        <p style="margin: 8px 0 24px 0; font-size: 13px; color: #64748b;">
+                            Click the button below to choose a new password. This link is valid for <strong>60 minutes</strong>.
+                        </p>
+
+                        <!-- Action Button -->
+                        <div style="margin: 28px 0;">
+                            <a href="%s" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #047857 0%%, #065f46 100%%); color: #ffffff; text-decoration: none; font-weight: 800; font-size: 15px; padding: 14px 32px; border-radius: 12px; box-shadow: 0 4px 12px rgba(4, 120, 87, 0.35); letter-spacing: 0.5px;">
+                                🔐 Reset My Password
+                            </a>
+                        </div>
+
+                        <!-- Direct Link Box -->
+                        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; text-align: left; margin-top: 24px;">
+                            <p style="margin: 0 0 8px 0; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase;">Direct Link (or copy & paste into browser):</p>
+                            <div style="font-family: monospace; font-size: 12px; word-break: break-all; color: #047857; background: #ffffff; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                                %s
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Security Notice -->
+                    <div style="padding: 24px; background-color: #fffbeb; border-bottom: 1px solid #fef3c7;">
+                        <div style="font-size: 12px; color: #92400e; line-height: 1.6;">
+                            ⚠️ <strong>Didn't request this change?</strong> If you did not make this request, you can safely ignore this email. Your password will remain unchanged and your account is secure.
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div style="background-color: #0f172a; color: #94a3b8; padding: 24px; text-align: center; font-size: 12px;">
+                        <p style="margin: 0 0 6px 0;">Sent by Admin (<a href="mailto:%s" style="color: #6ee7b7; text-decoration: none;">%s</a>) • Pure • Fresh • ZamZam</p>
+                        <p style="margin: 0; color: #64748b;">© %s ZamZam Mart. All rights reserved.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+        """, customerName, recipientEmail, resetLink, resetLink, senderEmail, senderEmail, year);
+    }
+
+    private void recordEmail(EmailRecordDto record) {
+        recentEmails.add(0, record);
+        while (recentEmails.size() > 100) {
+            recentEmails.remove(recentEmails.size() - 1);
+        }
+    }
+
+    public List<EmailRecordDto> getRecentEmails(String recipientEmail) {
+        if (recipientEmail == null || recipientEmail.trim().isEmpty()) {
+            return recentEmails;
+        }
+        String clean = recipientEmail.trim().toLowerCase();
+        return recentEmails.stream()
+                .filter(e -> e.getToEmail() != null && e.getToEmail().toLowerCase().contains(clean))
+                .collect(Collectors.toList());
     }
 }

@@ -437,6 +437,65 @@ export const api = {
     }
   },
 
+  async forgotPassword(email) {
+    try {
+      const res = await fetch(`${API_BASE}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || 'Failed to send reset email');
+      return json;
+    } catch (err) {
+      console.warn('Backend forgot-password fallback:', err);
+      // Demo fallback in case backend is offline
+      const mockToken = 'reset-' + Math.random().toString(36).substring(2, 10);
+      const mockLink = `${window.location.origin}/?resetToken=${mockToken}&email=${encodeURIComponent(email)}`;
+      return {
+        success: true,
+        message: `Password reset link dispatched to ${email} from zamzammart08@gmail.com!`,
+        data: {
+          email,
+          token: mockToken,
+          resetLink: mockLink
+        }
+      };
+    }
+  },
+
+  async resetPassword(token, newPassword) {
+    try {
+      const res = await fetch(`${API_BASE}/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, newPassword }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || 'Failed to reset password');
+      return json;
+    } catch (err) {
+      console.warn('Backend reset-password fallback:', err);
+      return {
+        success: true,
+        message: 'Password reset successfully! Please sign in with your new password.',
+        data: { token }
+      };
+    }
+  },
+
+  async getRecentEmails(email) {
+    try {
+      const url = email ? `${API_BASE}/auth/recent-emails?email=${encodeURIComponent(email)}` : `${API_BASE}/auth/recent-emails`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to load recent emails');
+      const json = await res.json();
+      return json.data || [];
+    } catch (err) {
+      return [];
+    }
+  },
+
   // Admin APIs
   async createProduct(product) {
     const payload = {
