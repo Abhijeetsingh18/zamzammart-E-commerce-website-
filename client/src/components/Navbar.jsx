@@ -44,7 +44,7 @@ export default function Navbar({
           <div className="flex items-center space-x-4">
             <span className="flex items-center font-medium">
               <ShieldCheck className="w-3.5 h-3.5 mr-1 text-emerald-400" />
-              100% Certified Halal & Fresh Guaranteed
+              100% Certified ZamZam & Fresh Guaranteed
             </span>
             <span className="hidden sm:inline-block text-emerald-300">|</span>
             <span className="hidden sm:flex items-center text-emerald-200">
@@ -84,7 +84,7 @@ export default function Navbar({
                 ZamZam <span className="text-emerald-600 ml-1">Mart</span>
               </span>
               <span className="text-[10px] tracking-wider uppercase font-semibold text-emerald-700 block">
-                Pure • Fresh • Halal
+                Pure • Fresh • ZamZam
               </span>
             </div>
           </div>
@@ -99,7 +99,7 @@ export default function Navbar({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="Search farm fresh vegetables, halal meats, dry fruits, spices..."
+                placeholder="Search farm fresh vegetables, ZamZam meats, dry fruits, spices..."
                 className="w-full pl-11 pr-24 py-3 bg-slate-100/90 border border-slate-200 hover:border-slate-300 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/15 rounded-full text-sm font-medium transition-all outline-none"
               />
               {searchQuery && (

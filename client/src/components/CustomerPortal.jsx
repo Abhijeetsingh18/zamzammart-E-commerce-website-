@@ -168,7 +168,7 @@ export default function CustomerPortal({ isOpen, onClose, initialOrderNumber = n
         return {
           bg: 'bg-indigo-50 text-indigo-700 border-indigo-200',
           label: 'Packed & Ready',
-          desc: '100% Halal fresh seal applied',
+          desc: '100% ZamZam fresh seal applied',
           icon: Box
         };
       case 'CONFIRMED':
@@ -458,7 +458,7 @@ export default function CustomerPortal({ isOpen, onClose, initialOrderNumber = n
                             </div>
                             <div>
                               <p className="font-extrabold text-sky-900 text-xs">Mohammad Tariq (ZamZam Express Rider)</p>
-                              <p className="text-[10px] text-sky-700">Out for Delivery in Electric Courier • Halal Sealed Box</p>
+                              <p className="text-[10px] text-sky-700">Out for Delivery in Electric Courier • ZamZam Sealed Box</p>
                             </div>
                           </div>
                           <div className="text-right">
@@ -746,7 +746,7 @@ export default function CustomerPortal({ isOpen, onClose, initialOrderNumber = n
                   </span>
                   <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center">
                     <ShieldCheck className="w-3 h-3 mr-0.5 text-amber-600" />
-                    100% Halal Certified
+                    100% ZamZam Certified
                   </span>
                 </div>
               </div>
@@ -805,7 +805,7 @@ export default function CustomerPortal({ isOpen, onClose, initialOrderNumber = n
 
             <div className="text-center border-b border-slate-200 pb-3">
               <h3 className="text-lg font-black text-slate-900">ZamZam Mart Tax Invoice</h3>
-              <p className="text-[11px] text-slate-500">Pure • Fresh • 100% Certified Halal</p>
+              <p className="text-[11px] text-slate-500">Pure • Fresh • 100% Certified ZamZam</p>
               <p className="text-xs font-mono font-bold text-emerald-800 mt-1">Invoice #{selectedInvoiceOrder.orderNumber}</p>
             </div>
 

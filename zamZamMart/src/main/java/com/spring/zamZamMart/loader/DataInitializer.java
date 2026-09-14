@@ -83,9 +83,9 @@ public class DataInitializer implements CommandLineRunner {
         ));
 
         Category catMeat = categoryRepository.save(new Category(
-                "Halal Meats & Poultry",
-                "halal-meats",
-                "100% Certified fresh Halal chicken, mutton, and cuts",
+                "ZamZam Meats & Poultry",
+                "zamzam-meats",
+                "100% Certified fresh ZamZam chicken, mutton, and cuts",
                 "https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=600&q=80",
                 "Beef"
         ));
@@ -156,10 +156,10 @@ public class DataInitializer implements CommandLineRunner {
                 true, true, 5.0, 84, catProduce
         ));
 
-        // Halal Meat
+        // ZamZam Meat
         Product chicken = new Product(
-                "Fresh Halal Skinless Curry Cut Chicken",
-                "100% Zabiha Halal certified, fresh tender bone-in chicken cut into ideal curry pieces.",
+                "Fresh ZamZam Skinless Curry Cut Chicken",
+                "100% ZamZam certified, fresh tender bone-in chicken cut into ideal curry pieces.",
                 new BigDecimal("280.00"), new BigDecimal("235.00"), "1 kg", 40,
                 "https://images.unsplash.com/photo-1604503468506-a8da13d82791?auto=format&fit=crop&w=600&q=80",
                 true, true, 4.9, 112, catMeat
@@ -167,7 +167,7 @@ public class DataInitializer implements CommandLineRunner {
         products.add(chicken);
 
         products.add(new Product(
-                "Premium Halal Tender Mutton Boti Cuts",
+                "Premium ZamZam Tender Mutton Boti Cuts",
                 "Fresh, juicy boneless goat mutton cubes perfect for biryani, kebabs, and stews.",
                 new BigDecimal("790.00"), new BigDecimal("720.00"), "500 g", 25,
                 "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80",

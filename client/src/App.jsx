@@ -26,7 +26,7 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('featured'); // 'featured', 'price-low', 'price-high', 'rating'
-  const [halalOnly, setHalalOnly] = useState(false);
+  const [zamzamOnly, setZamzamOnly] = useState(false);
 
   // Modals state
   const [activeProductModal, setActiveProductModal] = useState(null);
@@ -63,8 +63,8 @@ export default function App() {
     if (selectedCategory && p.category?.id !== selectedCategory.id) {
       return false;
     }
-    // Halal filter
-    if (halalOnly && !p.isHalal) {
+    // ZamZam filter
+    if (zamzamOnly && !p.isHalal) {
       return false;
     }
     // Search query
@@ -136,17 +136,17 @@ export default function App() {
             {/* Controls */}
             <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
               
-              {/* Halal only filter */}
+              {/* ZamZam only filter */}
               <button
-                onClick={() => setHalalOnly(!halalOnly)}
+                onClick={() => setZamzamOnly(!zamzamOnly)}
                 className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
-                  halalOnly
+                  zamzamOnly
                     ? 'bg-emerald-700 text-white border-emerald-700 shadow-sm'
                     : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                 }`}
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>100% Halal Only</span>
+                <span>100% ZamZam Only</span>
               </button>
 
               {/* Sort By dropdown */}
@@ -193,7 +193,7 @@ export default function App() {
                 onClick={() => {
                   setSelectedCategory(null);
                   setSearchQuery('');
-                  setHalalOnly(false);
+                  setZamzamOnly(false);
                 }}
                 className="mt-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors"
               >

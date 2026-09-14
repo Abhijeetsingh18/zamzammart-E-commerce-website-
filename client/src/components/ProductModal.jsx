@@ -44,7 +44,7 @@ export default function ProductModal({ product, onClose }) {
             {product.isHalal && (
               <span className="absolute bottom-4 left-4 bg-emerald-700 text-white text-xs font-extrabold px-2.5 py-1 rounded-lg flex items-center shadow">
                 <ShieldCheck className="w-3.5 h-3.5 mr-1 text-emerald-300" />
-                100% Certified Halal
+                100% Certified ZamZam
               </span>
             )}
           </div>

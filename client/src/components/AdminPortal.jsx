@@ -306,7 +306,7 @@ export default function AdminPortal({ isOpen, onClose, categories, onDataChanged
                           onChange={e => setProductForm({ ...productForm, isHalal: e.target.checked })}
                           className="rounded text-emerald-600"
                         />
-                        <span>Halal Certified</span>
+                        <span>ZamZam Certified</span>
                       </label>
                       <label className="flex items-center space-x-1.5 cursor-pointer font-bold text-slate-700">
                         <input

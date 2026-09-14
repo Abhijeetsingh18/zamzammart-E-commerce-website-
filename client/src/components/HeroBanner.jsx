@@ -15,18 +15,18 @@ export default function HeroBanner({ onShopNow }) {
           <div className="space-y-5">
             <div className="inline-flex items-center space-x-2 bg-emerald-800/80 border border-emerald-600/30 px-3.5 py-1.5 rounded-full text-xs font-bold text-amber-300 backdrop-blur-md">
               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>RAMADAN & FESTIVE SAVINGS SPECIAL</span>
+              <span>NAVRATRI/DIWALI & FESTIVE SAVINGS SPECIAL</span>
             </div>
 
             <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight">
               Pure, Fresh & <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-amber-300">
-                100% Halal Groceries
+                100% ZamZam Groceries
               </span>
             </h1>
 
             <p className="text-emerald-100/90 text-sm sm:text-base max-w-lg leading-relaxed">
-              From fresh farm harvest and certified Halal meats to Ajwa dates, Kashmiri saffron, and cold-pressed pantry essentials — delivered directly to your doorstep in 2 hours.
+              From fresh farm harvest and certified ZamZam meats to Ajwa dates, Kashmiri saffron, and cold-pressed pantry essentials — delivered directly to your doorstep in 2 hours.
             </p>
 
             <div className="pt-2 flex flex-wrap gap-4 items-center">
@@ -59,8 +59,8 @@ export default function HeroBanner({ onShopNow }) {
                   <ShieldCheck className="w-6 h-6" />
                 </div>
                 <div>
-                  <div className="text-xs font-extrabold">100% Zabiha Halal</div>
-                  <div className="text-[10px] text-slate-500 font-medium">Certified Slaughter & Source</div>
+                  <div className="text-xs font-extrabold">100% ZamZam</div>
+                  <div className="text-[10px] text-slate-500 font-medium">Certified Pure & Fresh Source</div>
                 </div>
               </div>
 
@@ -81,7 +81,7 @@ export default function HeroBanner({ onShopNow }) {
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="text-xs font-bold text-slate-900">Certified Halal</h4>
+            <h4 className="text-xs font-bold text-slate-900">Certified ZamZam</h4>
             <p className="text-[11px] text-slate-500">100% genuine & verified</p>
           </div>
         </div>

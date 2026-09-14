@@ -50,7 +50,7 @@ public class EmailService {
         logger.info("🎉 [WELCOME GREETING EMAIL]");
         logger.info("From (Admin Gmail): {}", senderEmail);
         logger.info("To (New Customer Login): {}", customerEmail);
-        logger.info("Subject: 🌟 Welcome to ZamZam Mart, {}! 100% Certified Halal Groceries", displayName);
+        logger.info("Subject: 🌟 Welcome to ZamZam Mart, {}! 100% Certified ZamZam Groceries", displayName);
         logger.info("Welcome Gift: Coupon code ZAMZAM10 for 10% OFF on your first grocery delivery");
         logger.info("Customer Support: {}", senderEmail);
         logger.info("================================================================================");
@@ -61,7 +61,7 @@ public class EmailService {
                 MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
                 helper.setFrom(senderEmail, "ZamZam Mart Welcome Team");
                 helper.setTo(customerEmail);
-                helper.setSubject("🌟 Welcome to ZamZam Mart, " + displayName + "! 100% Certified Halal Groceries");
+                helper.setSubject("🌟 Welcome to ZamZam Mart, " + displayName + "! 100% Certified ZamZam Groceries");
                 helper.setText(htmlContent, true);
 
                 mailSender.send(message);
@@ -137,7 +137,7 @@ public class EmailService {
                     <!-- Header -->
                     <div style="background: linear-gradient(135deg, #064e3b 0%%, #047857 100%%); padding: 36px 24px; text-align: center; color: #ffffff;">
                         <h1 style="margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">ZamZam <span style="color: #6ee7b7;">Mart</span></h1>
-                        <p style="margin: 6px 0 0 0; font-size: 13px; color: #a7f3d0; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Pure • Fresh • 100%% Certified Halal</p>
+                        <p style="margin: 6px 0 0 0; font-size: 13px; color: #a7f3d0; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Pure • Fresh • 100%% Certified ZamZam</p>
                     </div>
 
                     <!-- Welcome Banner -->
@@ -163,7 +163,7 @@ public class EmailService {
                         <h3 style="margin: 0 0 16px; font-size: 14px; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">Why Shop at ZamZam Mart?</h3>
                         <div style="background-color: #f8fafc; border-radius: 12px; padding: 16px; border: 1px solid #e2e8f0; font-size: 13px; color: #334155; line-height: 1.8;">
                             <div>⚡ <strong>Express 2-Hour Delivery:</strong> Rapid delivery right to your kitchen counter.</div>
-                            <div>🥩 <strong>100%% Certified Zabiha Halal:</strong> Fresh poultry, mutton, and halal pantry staples.</div>
+                            <div>🥩 <strong>100%% Certified ZamZam:</strong> Fresh poultry, mutton, and ZamZam pantry staples.</div>
                             <div>🌱 <strong>Farm-Fresh Produce:</strong> Crisp fruits and vegetables harvested daily.</div>
                             <div>💳 <strong>Instant UPI & Razorpay:</strong> Safe, seamless payment with Google Pay, PhonePe, & Paytm.</div>
                         </div>
@@ -216,7 +216,7 @@ public class EmailService {
                     <!-- Header -->
                     <div style="background: linear-gradient(135deg, #064e3b 0%%, #047857 100%%); padding: 30px 20px; text-align: center; color: #ffffff;">
                         <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">ZamZam <span style="color: #6ee7b7;">Mart</span></h1>
-                        <p style="margin: 5px 0 0 0; font-size: 13px; color: #a7f3d0; font-weight: 600;">100%% Certified Pure, Fresh & Halal</p>
+                        <p style="margin: 5px 0 0 0; font-size: 13px; color: #a7f3d0; font-weight: 600;">100%% Certified Pure, Fresh & ZamZam</p>
                     </div>
 
                     <!-- Confirmation Banner -->
@@ -270,7 +270,7 @@ public class EmailService {
 
                     <!-- Footer -->
                     <div style="background-color: #0f172a; color: #94a3b8; padding: 20px; text-align: center; font-size: 11px;">
-                        <p style="margin: 0 0 5px 0;">Sent by Admin (<strong style="color: #ffffff;">%s</strong>) • Pure • Fresh • Halal</p>
+                        <p style="margin: 0 0 5px 0;">Sent by Admin (<strong style="color: #ffffff;">%s</strong>) • Pure • Fresh • ZamZam</p>
                         <p style="margin: 0; color: #64748b;">© %s ZamZam Mart. All rights reserved.</p>
                     </div>
                 </div>

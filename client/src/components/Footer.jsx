@@ -19,12 +19,12 @@ export default function Footer({ onSelectCategory, categories, onOpenOrders, onO
             </div>
 
             <p className="text-xs text-slate-400 max-w-sm leading-relaxed">
-              Your trusted fullstack online supermarket for 100% certified Halal meats, fresh farm vegetables & fruits, authentic Kashmiri saffron, premium dates, and pure cold-pressed pantry essentials.
+              Your trusted fullstack online supermarket for 100% certified ZamZam meats, fresh farm vegetables & fruits, authentic Kashmiri saffron, premium dates, and pure cold-pressed pantry essentials.
             </p>
 
             <div className="flex items-center space-x-2 text-xs text-emerald-400 font-bold bg-slate-800/60 p-3 rounded-xl border border-slate-700/50 max-w-sm">
               <ShieldCheck className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-              <span>100% Certified Zabiha Halal Guarantee</span>
+              <span>100% Certified ZamZam Guarantee</span>
             </div>
           </div>
 
@@ -66,7 +66,7 @@ export default function Footer({ onSelectCategory, categories, onOpenOrders, onO
                 </li>
               )}
               <li><span className="hover:text-emerald-400 cursor-pointer">Express 2-Hour Delivery Areas</span></li>
-              <li><span className="hover:text-emerald-400 cursor-pointer">Halal Certification & Standards</span></li>
+              <li><span className="hover:text-emerald-400 cursor-pointer">ZamZam Quality & Standards</span></li>
               <li><span className="hover:text-emerald-400 cursor-pointer">Return & Refund Policy</span></li>
               <li><span className="hover:text-emerald-400 cursor-pointer">Terms & Privacy</span></li>
               <li><span className="hover:text-emerald-400 cursor-pointer">Wholesale & Bulk Orders</span></li>

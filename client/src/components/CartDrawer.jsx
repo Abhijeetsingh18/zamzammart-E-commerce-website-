@@ -103,7 +103,7 @@ export default function CartDrawer({ onProceedToCheckout }) {
                 <div>
                   <h4 className="font-extrabold text-slate-800 text-lg">Your cart is empty</h4>
                   <p className="text-xs text-slate-500 mt-1 max-w-xs">
-                    Explore fresh vegetables, halal meats, dry fruits, and spices to add items!
+                    Explore fresh vegetables, ZamZam meats, dry fruits, and spices to add items!
                   </p>
                 </div>
                 <button

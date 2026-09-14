@@ -5,7 +5,7 @@ const API_BASE = '/api';
 // Initial fallback mock data for offline resilience
 const FALLBACK_CATEGORIES = [
   { id: 1, name: 'Fresh Fruits & Vegetables', slug: 'fruits-vegetables', icon: 'Apple', imageUrl: 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=600&q=80' },
-  { id: 2, name: 'Halal Meats & Poultry', slug: 'halal-meats', icon: 'Beef', imageUrl: 'https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=600&q=80' },
+  { id: 2, name: 'ZamZam Meats & Poultry', slug: 'zamzam-meats', icon: 'Beef', imageUrl: 'https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=600&q=80' },
   { id: 3, name: 'Dairy & Farm Eggs', slug: 'dairy-eggs', icon: 'Milk', imageUrl: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=600&q=80' },
   { id: 4, name: 'Bakery & Delights', slug: 'bakery-delights', icon: 'Croissant', imageUrl: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80' },
   { id: 5, name: 'Rice, Spices & Pantry', slug: 'pantry-spices', icon: 'CookingPot', imageUrl: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&w=600&q=80' },
@@ -46,8 +46,8 @@ const FALLBACK_PRODUCTS = [
   },
   {
     id: 3,
-    name: 'Fresh Halal Skinless Curry Cut Chicken',
-    description: '100% Zabiha Halal certified, fresh tender bone-in chicken cut into ideal curry pieces.',
+    name: 'Fresh ZamZam Skinless Curry Cut Chicken',
+    description: '100% ZamZam certified, fresh tender bone-in chicken cut into ideal curry pieces.',
     price: 280.00,
     discountPrice: 235.00,
     unit: '1 kg',
@@ -57,11 +57,11 @@ const FALLBACK_PRODUCTS = [
     isFeatured: true,
     rating: 4.9,
     ratingCount: 112,
-    category: { id: 2, name: 'Halal Meats & Poultry' }
+    category: { id: 2, name: 'ZamZam Meats & Poultry' }
   },
   {
     id: 4,
-    name: 'Premium Halal Tender Mutton Boti Cuts',
+    name: 'Premium ZamZam Tender Mutton Boti Cuts',
     description: 'Fresh, juicy boneless goat mutton cubes perfect for biryani, kebabs, and rich stews.',
     price: 790.00,
     discountPrice: 720.00,
@@ -72,7 +72,7 @@ const FALLBACK_PRODUCTS = [
     isFeatured: true,
     rating: 4.8,
     ratingCount: 65,
-    category: { id: 2, name: 'Halal Meats & Poultry' }
+    category: { id: 2, name: 'ZamZam Meats & Poultry' }
   },
   {
     id: 5,

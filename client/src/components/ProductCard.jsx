@@ -26,7 +26,7 @@ export default function ProductCard({ product, onOpenDetail }) {
           {product.isHalal && (
             <span className="inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-black bg-emerald-700 text-white shadow-sm pointer-events-auto">
               <ShieldCheck className="w-3 h-3 mr-0.5 text-emerald-300" />
-              HALAL
+              ZAMZAM
             </span>
           )}
           {discountPercent > 0 && (
