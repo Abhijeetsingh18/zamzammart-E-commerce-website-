@@ -55,13 +55,7 @@ npm run dev
 
 ---
 
-## 🔑 Accounts & Authentication
-
-| Role | Email | Password | Features |
-| :--- | :--- | :--- | :--- |
-| **Admin** | `zamzammart08@gmail.com` | `abhijeet@7890` | Full Admin Portal, Catalog, Orders & Inventory Management |
-| **Customer** | `customer@zamzammart.com` | `customer123` | Customer Portal, Order History, Live Delivery Tracking |
-| **Direct Gmail** | *Any personal Gmail* | *Passwordless* | Click **Continue with Google / Gmail** for 1-click sign in |
+## Authentication
 
 *(New customers automatically receive an automated Welcome Greeting Email from `zamzammart08@gmail.com`)*
 
