@@ -1,8 +1,10 @@
 package com.spring.zamZamMart.controller;
 
 import com.spring.zamZamMart.dto.ApiResponse;
+import com.spring.zamZamMart.dto.ProductDTO;
 import com.spring.zamZamMart.entity.Product;
 import com.spring.zamZamMart.service.ProductService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -46,6 +48,25 @@ public class ProductController {
     public ResponseEntity<?> searchProducts(@RequestParam(name = "q", defaultValue = "") String query) {
         List<Product> products = productService.searchProducts(query);
         return ResponseEntity.ok(new ApiResponse(true, "Search results", products));
+    }
+
+    @PostMapping
+    public ResponseEntity<?> createProduct(@Valid @RequestBody ProductDTO dto) {
+        Product saved = productService.saveProduct(dto);
+        return ResponseEntity.ok(new ApiResponse(true, "Product created successfully", saved));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateProduct(@PathVariable Long id, @Valid @RequestBody ProductDTO dto) {
+        dto.setId(id);
+        Product updated = productService.saveProduct(dto);
+        return ResponseEntity.ok(new ApiResponse(true, "Product updated successfully", updated));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteProduct(@PathVariable Long id) {
+        productService.deleteProduct(id);
+        return ResponseEntity.ok(new ApiResponse(true, "Product deleted successfully"));
     }
 }
 

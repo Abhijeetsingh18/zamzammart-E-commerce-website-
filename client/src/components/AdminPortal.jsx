@@ -57,12 +57,23 @@ export default function AdminPortal({ isOpen, onClose, categories, onDataChanged
   const handleSaveProduct = async (e) => {
     e.preventDefault();
     try {
+      if (!productForm.name || !productForm.name.trim()) {
+        alert('Please enter a valid product name');
+        return;
+      }
+      const priceNum = parseFloat(productForm.price);
+      if (isNaN(priceNum) || priceNum <= 0) {
+        alert('Please enter a valid positive price');
+        return;
+      }
+
       const payload = {
         ...productForm,
-        price: parseFloat(productForm.price),
+        name: productForm.name.trim(),
+        price: priceNum,
         discountPrice: productForm.discountPrice ? parseFloat(productForm.discountPrice) : null,
-        stockQuantity: parseInt(productForm.stockQuantity, 10),
-        categoryId: parseInt(productForm.categoryId, 10),
+        stockQuantity: parseInt(productForm.stockQuantity, 10) || 50,
+        categoryId: parseInt(productForm.categoryId, 10) || (categories[0]?.id || 1),
       };
 
       if (editingId) {
@@ -73,10 +84,11 @@ export default function AdminPortal({ isOpen, onClose, categories, onDataChanged
 
       setIsFormOpen(false);
       setEditingId(null);
-      loadAllAdminData();
+      await loadAllAdminData();
       if (onDataChanged) onDataChanged();
     } catch (err) {
-      alert('Failed to save product: ' + err.message);
+      console.error('Failed to save product:', err);
+      alert('Failed to save product: ' + (err.message || 'Unknown error occurred. Please check backend connection.'));
     }
   };
 

@@ -57,6 +57,18 @@ public class SecurityConfig {
                 .requestMatchers("/api/orders/**").permitAll() // allow creating guest/user orders
                 .requestMatchers("/api/payment/**").permitAll() // allow payment order creation & verification
                 .anyRequest().authenticated()
+            )
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.setStatus(401);
+                    response.getWriter().write("{\"success\":false,\"message\":\"Unauthorized: " + authException.getMessage() + "\"}");
+                })
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.setStatus(403);
+                    response.getWriter().write("{\"success\":false,\"message\":\"Forbidden: Admin privileges required\"}");
+                })
             );
 
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
