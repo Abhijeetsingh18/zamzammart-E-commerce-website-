@@ -220,6 +220,7 @@ export default function App() {
         categories={categories}
         onSelectCategory={setSelectedCategory}
         onOpenOrders={() => setIsOrdersOpen(true)}
+        onOpenAuth={() => setIsAuthOpen(true)}
       />
 
       {/* Slide-out Cart Drawer */}

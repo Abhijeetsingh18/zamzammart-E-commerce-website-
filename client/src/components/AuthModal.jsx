@@ -14,10 +14,18 @@ export default function AuthModal({ isOpen, onClose }) {
   const [isGooglePromptOpen, setIsGooglePromptOpen] = useState(false);
   const [googleEmail, setGoogleEmail] = useState('');
   const [googleName, setGoogleName] = useState('');
+  const [showAdminAccess, setShowAdminAccess] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const { login, register, loginWithGoogle } = useAuth();
+
+  const handleClose = () => {
+    setShowAdminAccess(false);
+    setIsGooglePromptOpen(false);
+    setError('');
+    onClose();
+  };
 
   if (!isOpen) return null;
 
@@ -32,7 +40,7 @@ export default function AuthModal({ isOpen, onClose }) {
       } else {
         await register(formData);
       }
-      onClose();
+      handleClose();
     } catch (err) {
       setError(err.message || 'Authentication failed. Please check credentials.');
     } finally {
@@ -47,8 +55,7 @@ export default function AuthModal({ isOpen, onClose }) {
       const email = emailToUse || googleEmail || 'user@gmail.com';
       const name = nameToUse || googleName || email.split('@')[0];
       await loginWithGoogle(email, name);
-      setIsGooglePromptOpen(false);
-      onClose();
+      handleClose();
     } catch (err) {
       setError(err.message || 'Google / Gmail sign in failed.');
     } finally {
@@ -61,7 +68,7 @@ export default function AuthModal({ isOpen, onClose }) {
     setLoading(true);
     try {
       await login(email, password);
-      onClose();
+      handleClose();
     } catch (err) {
       setError(err.message || 'Login failed');
     } finally {
@@ -75,7 +82,7 @@ export default function AuthModal({ isOpen, onClose }) {
         
         {/* Close Button */}
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors"
         >
           <X className="w-4 h-4" />
@@ -148,30 +155,20 @@ export default function AuthModal({ isOpen, onClose }) {
 
               <input
                 type="email"
-                placeholder="Enter your email (e.g. yourname@gmail.com)"
+                placeholder="Enter your Gmail address (e.g. yourname@gmail.com)"
                 value={googleEmail}
                 onChange={(e) => setGoogleEmail(e.target.value)}
                 className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 outline-none"
               />
 
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleGoogleLogin(googleEmail, googleName)}
-                  disabled={loading || !googleEmail}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold py-2 rounded-xl transition-colors shadow-sm"
-                >
-                  {loading ? 'Signing in...' : 'Sign in with Gmail'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleGoogleLogin('customer.google@gmail.com', 'Google Customer')}
-                  className="bg-slate-200 hover:bg-slate-300 text-slate-800 text-[11px] font-semibold px-3 py-2 rounded-xl transition-colors"
-                  title="One-click demo Gmail account"
-                >
-                  1-Click Gmail
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => handleGoogleLogin(googleEmail, googleName)}
+                disabled={loading || !googleEmail}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold py-2 rounded-xl transition-colors shadow-sm"
+              >
+                {loading ? 'Signing in...' : 'Sign in with Gmail'}
+              </button>
             </div>
           )}
 
@@ -262,29 +259,82 @@ export default function AuthModal({ isOpen, onClose }) {
             {loading ? 'Processing...' : isLoginTab ? 'Sign In to Account' : 'Register Account'}
           </button>
 
-          {/* Customer Login & Admin Login Quick Buttons */}
-          <div className="pt-3 border-t border-slate-100">
-            <p className="text-[10px] font-bold text-slate-400 text-center uppercase tracking-wider mb-2">
-              Instant 1-Click Access
+          {/* Helper Tab Switcher */}
+          <div className="text-center pt-1">
+            <p className="text-xs text-slate-500">
+              {isLoginTab ? (
+                <span>
+                  Don't have an account?{' '}
+                  <button
+                    type="button"
+                    onClick={() => { setIsLoginTab(false); setError(''); }}
+                    className="text-emerald-700 font-bold hover:underline"
+                  >
+                    Create Account
+                  </button>
+                </span>
+              ) : (
+                <span>
+                  Already have an account?{' '}
+                  <button
+                    type="button"
+                    onClick={() => { setIsLoginTab(true); setError(''); }}
+                    className="text-emerald-700 font-bold hover:underline"
+                  >
+                    Sign In
+                  </button>
+                </span>
+              )}
             </p>
-            <div className="grid grid-cols-2 gap-2">
+          </div>
+
+          {/* Discreet Administrator Portal Access - hidden from standard customers */}
+          <div className="pt-3 border-t border-slate-100">
+            <div className="text-center">
               <button
                 type="button"
-                onClick={() => fillAndLogin('customer@zamzammart.com', 'customer123')}
-                className="text-[11px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 py-2.5 px-2 rounded-xl text-center transition-colors flex items-center justify-center space-x-1 shadow-sm"
+                onClick={() => setShowAdminAccess(!showAdminAccess)}
+                className="text-[11px] font-semibold text-slate-400 hover:text-slate-600 transition-colors inline-flex items-center space-x-1.5 py-1 px-2.5 rounded-lg hover:bg-slate-50"
               >
-                <User className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Customer Login</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => fillAndLogin('zamzammart08@gmail.com', 'abhijeet@7890')}
-                className="text-[11px] font-bold text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200 py-2.5 px-2 rounded-xl text-center transition-colors flex items-center justify-center space-x-1 shadow-sm"
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
-                <span>Admin Login</span>
+                <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
+                <span>{showAdminAccess ? 'Close Admin Access' : 'Store Administrator Portal'}</span>
               </button>
             </div>
+
+            {showAdminAccess && (
+              <div className="mt-2.5 p-3.5 bg-slate-900 text-white rounded-2xl border border-slate-800 animate-fade-in shadow-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center space-x-1.5">
+                    <ShieldCheck className="w-4 h-4 text-amber-400" />
+                    <span className="text-xs font-black text-amber-300 tracking-wide uppercase">Store Admin Only</span>
+                  </div>
+                  <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded font-mono font-bold">
+                    RESTRICTED
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-300 mb-2.5 leading-tight">
+                  Official Store Email: <span className="text-amber-300 font-bold">zamzammart08@gmail.com</span>
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fillAndLogin('zamzammart08@gmail.com', 'abhijeet@7890')}
+                    className="text-[11px] font-extrabold text-slate-950 bg-amber-400 hover:bg-amber-300 py-2 px-2 rounded-xl text-center transition-colors flex items-center justify-center space-x-1 shadow-sm"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Admin Login</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fillAndLogin('customer@zamzammart.com', 'customer123')}
+                    className="text-[11px] font-bold text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2 px-2 rounded-xl text-center transition-colors flex items-center justify-center space-x-1 shadow-sm"
+                  >
+                    <User className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Customer Login</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </form>
 

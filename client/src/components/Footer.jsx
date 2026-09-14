@@ -1,7 +1,7 @@
 import React from 'react';
 import { ShoppingBag, ShieldCheck, Phone, Mail, MapPin, Heart } from 'lucide-react';
 
-export default function Footer({ onSelectCategory, categories, onOpenOrders }) {
+export default function Footer({ onSelectCategory, categories, onOpenOrders, onOpenAuth }) {
   return (
     <footer className="bg-slate-900 text-slate-300 pt-16 pb-8 mt-20 border-t border-slate-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -101,6 +101,19 @@ export default function Footer({ onSelectCategory, categories, onOpenOrders }) {
             <span>Powered by Spring Boot 3 & React</span>
             <span>•</span>
             <span className="text-emerald-400 font-semibold">Ready for Production</span>
+            {onOpenAuth && (
+              <>
+                <span>•</span>
+                <button
+                  type="button"
+                  onClick={onOpenAuth}
+                  className="hover:text-slate-300 text-slate-500 transition-colors text-[11px]"
+                  title="Store Administrator Portal"
+                >
+                  Admin Access
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
