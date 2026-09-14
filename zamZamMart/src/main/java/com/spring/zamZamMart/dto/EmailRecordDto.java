@@ -90,3 +90,4 @@ public class EmailRecordDto {
         this.timestamp = timestamp;
     }
 }
+

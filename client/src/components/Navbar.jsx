@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   ShoppingBag, Search, Heart, User, MapPin, 
-  Menu, X, ShieldCheck, ChevronDown, LogOut, Package, Settings, Flame 
+  Menu, X, ShieldCheck, ChevronDown, LogOut, Package, Settings, Flame,
+  Smartphone, Sliders 
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import { useDevice } from '../context/DeviceContext';
 
 export default function Navbar({ 
   categories, 
@@ -21,6 +23,7 @@ export default function Navbar({
   const { user, logout, isAdmin } = useAuth();
   const { totalItemCount, total, setIsCartOpen } = useCart();
   const { wishlist } = useWishlist();
+  const { activeDevice, deviceMode, setIsCustomizerOpen } = useDevice();
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -52,7 +55,17 @@ export default function Navbar({
               Use code <strong className="text-amber-300 ml-1">ZAMZAM10</strong> for 10% Off
             </span>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2.5">
+            <button 
+              type="button"
+              onClick={() => setIsCustomizerOpen(true)}
+              className="flex items-center text-emerald-200 hover:text-white transition-colors bg-emerald-800/70 hover:bg-emerald-700 px-2.5 py-0.5 rounded-full font-bold text-[11px] border border-emerald-600/40 shadow-sm"
+              title="Customize view for Android, iPhone, iPad, or Desktop"
+            >
+              <Sliders className="w-3 h-3 mr-1 text-emerald-300" />
+              <span>Device: <strong className="text-white uppercase">{deviceMode === 'auto' ? `Auto (${activeDevice})` : activeDevice}</strong></span>
+            </button>
+            <span className="hidden sm:inline-block text-emerald-300">|</span>
             <button 
               onClick={onOpenOrders}
               className="flex items-center text-emerald-200 hover:text-white transition-colors bg-emerald-800/80 hover:bg-emerald-700 px-2.5 py-0.5 rounded-full font-bold text-[11px] border border-emerald-600/40"

@@ -2,10 +2,12 @@ import React from 'react';
 import { Plus, Minus, Star, Heart, ShieldCheck, ShoppingCart } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import { useDevice } from '../context/DeviceContext';
 
 export default function ProductCard({ product, onOpenDetail }) {
   const { cartItems, addToCart, updateQuantity } = useCart();
   const { toggleWishlist, isWishlisted } = useWishlist();
+  const { isMobile, triggerHaptic } = useDevice();
 
   const cartItem = cartItems.find(item => item.product.id === product.id);
   const qtyInCart = cartItem ? cartItem.quantity : 0;
@@ -113,8 +115,13 @@ export default function ProductCard({ product, onOpenDetail }) {
           <div>
             {qtyInCart === 0 ? (
               <button
-                onClick={() => addToCart(product, 1)}
-                className="bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 hover:border-emerald-600 font-bold text-xs px-3.5 py-2 rounded-xl flex items-center space-x-1.5 transition-all shadow-sm active:scale-95"
+                onClick={() => {
+                  triggerHaptic(15);
+                  addToCart(product, 1);
+                }}
+                className={`bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 hover:border-emerald-600 font-bold text-xs px-3.5 rounded-xl flex items-center space-x-1.5 transition-all shadow-sm active:scale-95 ${
+                  isMobile ? 'py-2.5 min-h-[38px]' : 'py-2'
+                }`}
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add</span>
@@ -122,15 +129,21 @@ export default function ProductCard({ product, onOpenDetail }) {
             ) : (
               <div className="flex items-center bg-emerald-700 text-white rounded-xl overflow-hidden shadow-sm">
                 <button
-                  onClick={() => updateQuantity(product.id, qtyInCart - 1)}
-                  className="p-1.5 hover:bg-emerald-800 transition-colors"
+                  onClick={() => {
+                    triggerHaptic(10);
+                    updateQuantity(product.id, qtyInCart - 1);
+                  }}
+                  className={`hover:bg-emerald-800 transition-colors ${isMobile ? 'p-2' : 'p-1.5'}`}
                 >
                   <Minus className="w-3.5 h-3.5" />
                 </button>
                 <span className="px-2 text-xs font-extrabold">{qtyInCart}</span>
                 <button
-                  onClick={() => updateQuantity(product.id, qtyInCart + 1)}
-                  className="p-1.5 hover:bg-emerald-800 transition-colors"
+                  onClick={() => {
+                    triggerHaptic(10);
+                    updateQuantity(product.id, qtyInCart + 1);
+                  }}
+                  className={`hover:bg-emerald-800 transition-colors ${isMobile ? 'p-2' : 'p-1.5'}`}
                 >
                   <Plus className="w-3.5 h-3.5" />
                 </button>

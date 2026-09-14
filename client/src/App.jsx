@@ -15,9 +15,14 @@ import OrdersModal from './components/OrdersModal';
 import AdminPortal from './components/AdminPortal';
 import WishlistModal from './components/WishlistModal';
 import Footer from './components/Footer';
+import MobileNavDock from './components/MobileNavDock';
+import DeviceCustomizer from './components/DeviceCustomizer';
+import { useDevice } from './context/DeviceContext';
 import { api } from './services/api';
 
 export default function App() {
+  const { isMobile, isTablet, isDesktop, activeDevice, showDeviceFrame } = useDevice();
+
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -57,6 +62,42 @@ export default function App() {
     } catch (e) {
       // ignore
     }
+  }, []);
+
+  // Keyboard navigation shortcuts for Desktop & Laptop
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Don't intercept if typing in form inputs
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
+        if (e.key === 'Escape') {
+          e.target.blur();
+        }
+        return;
+      }
+
+      // '/' to focus search bar
+      if (e.key === '/') {
+        e.preventDefault();
+        const searchInput = document.querySelector('input[placeholder*="Search"], input[type="search"]');
+        if (searchInput) {
+          searchInput.focus();
+          searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+
+      // 'Escape' closes all open modals
+      if (e.key === 'Escape') {
+        setActiveProductModal(null);
+        setIsCheckoutOpen(false);
+        setIsAuthOpen(false);
+        setIsOrdersOpen(false);
+        setIsAdminOpen(false);
+        setIsWishlistOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const loadStoreData = async () => {
@@ -105,7 +146,7 @@ export default function App() {
   });
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 selection:bg-emerald-500 selection:text-white">
+    <div className={`min-h-screen flex flex-col bg-slate-50 selection:bg-emerald-500 selection:text-white transition-all ${isMobile ? 'pb-24' : ''}`}>
       {/* Top Navbar */}
       <Navbar
         categories={categories}
@@ -301,6 +342,16 @@ export default function App() {
         onClose={() => setIsWishlistOpen(false)}
         onOpenProduct={setActiveProductModal}
       />
+
+      {/* Mobile Navigation Dock (Active on Android & iPhone) */}
+      <MobileNavDock
+        onSelectCategory={(catId) => setSelectedCategory(catId)}
+        onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenOrders={() => setIsOrdersOpen(true)}
+      />
+
+      {/* Interactive Multi-Device Customizer Center & Trigger */}
+      <DeviceCustomizer />
     </div>
   );
 }
