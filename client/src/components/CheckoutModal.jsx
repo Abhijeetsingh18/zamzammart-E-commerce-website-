@@ -204,6 +204,14 @@ export default function CheckoutModal({ isOpen, onClose, onOrderSuccess }) {
       return;
     }
 
+    const cleanPhone = formData.phone ? formData.phone.replace(/\D/g, '') : '';
+    const standard10Digit = cleanPhone.length === 12 && cleanPhone.startsWith('91') ? cleanPhone.slice(2) : cleanPhone;
+
+    if (!/^[6-9]\d{9}$/.test(standard10Digit)) {
+      setError('Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9 (e.g. 9876543210).');
+      return;
+    }
+
     if (!formData.customerEmail || !formData.customerEmail.includes('@')) {
       setError('Please enter a valid email address (e.g. yourname@gmail.com) for order invoice & tracking.');
       return;
@@ -217,7 +225,7 @@ export default function CheckoutModal({ isOpen, onClose, onOrderSuccess }) {
     const orderPayload = {
       customerName: formData.customerName,
       customerEmail: formData.customerEmail,
-      phone: formData.phone,
+      phone: standard10Digit,
       shippingAddress: formData.shippingAddress,
       city: formData.city,
       postalCode: formData.postalCode,
@@ -304,24 +312,40 @@ export default function CheckoutModal({ isOpen, onClose, onOrderSuccess }) {
                   value={formData.customerName}
                   onChange={handleChange}
                   required
-                  placeholder="e.g. Amina Rahman"
+                  placeholder="e.g. Rahul Sharma"
                   className="w-full text-xs px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"
                 />
               </div>
 
               <div>
                 <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                  Contact Phone (For Delivery OTP)
+                  Contact Mobile (10 Digits Indian Number)
                 </label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  required
-                  placeholder="+91 9876543210"
-                  className="w-full text-xs px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"
-                />
+                <div className="flex rounded-xl shadow-sm border border-slate-200 bg-slate-50 focus-within:bg-white focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 overflow-hidden">
+                  <div className="flex items-center px-3 bg-slate-100 border-r border-slate-200 text-slate-700 font-bold text-xs select-none">
+                    <span className="mr-1 text-sm">🇮🇳</span>
+                    <span>+91</span>
+                  </div>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/\D/g, '');
+                      const trimmed = raw.length > 10 ? raw.slice(raw.length - 10) : raw;
+                      setFormData(prev => ({ ...prev, phone: trimmed }));
+                    }}
+                    maxLength={10}
+                    required
+                    placeholder="9876543210"
+                    className="w-full text-xs px-3.5 py-2.5 bg-transparent border-0 outline-none font-semibold text-slate-800 placeholder:font-normal"
+                  />
+                </div>
+                {formData.phone && !/^[6-9]\d{9}$/.test(formData.phone) && (
+                  <p className="text-[10px] text-amber-600 mt-1 font-medium">
+                    Must be 10 digits starting with 6, 7, 8, or 9 ({formData.phone.length}/10 digits)
+                  </p>
+                )}
               </div>
 
               {/* GMAIL Input Field */}

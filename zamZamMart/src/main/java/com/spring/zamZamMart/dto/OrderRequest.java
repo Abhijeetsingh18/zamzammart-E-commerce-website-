@@ -2,6 +2,7 @@ package com.spring.zamZamMart.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Pattern;
 import java.util.List;
 
 public class OrderRequest {
@@ -11,6 +12,7 @@ public class OrderRequest {
     private String customerEmail;
 
     @NotBlank(message = "Phone number is required")
+    @Pattern(regexp = "^(\\+91[\\s-]?)?[6-9]\\d{9}$", message = "Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9")
     private String phone;
 
     @NotBlank(message = "Shipping address is required")

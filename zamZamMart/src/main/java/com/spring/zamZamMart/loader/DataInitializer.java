@@ -32,8 +32,17 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        // Remove any old demo admin
+        // Purge any fake customer accounts and demo orders
+        userRepository.findByEmail("customer@zamzammart.com").ifPresent(user -> {
+            try {
+                orderRepository.findByUserIdOrderByOrderDateDesc(user.getId()).forEach(orderRepository::delete);
+            } catch (Exception ignored) {}
+            userRepository.delete(user);
+        });
         userRepository.findByEmail("admin@zamzammart.com").ifPresent(userRepository::delete);
+        try {
+            orderRepository.findByOrderNumber("ZZM-DEMO99").ifPresent(orderRepository::delete);
+        } catch (Exception ignored) {}
 
         // Ensure real admin account with abhijeet@7890
         User realAdmin = userRepository.findByEmail("zamzammart08@gmail.com").orElse(null);
@@ -59,21 +68,9 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void initData() {
-        System.out.println(">>> Initializing ZamZam Mart default data...");
+        System.out.println(">>> Initializing ZamZam Mart default data (Real Customers Only)...");
 
-        // 1. Seed Customer
-
-        User customer = new User(
-                "Amina Rahman",
-                "customer@zamzammart.com",
-                passwordEncoder.encode("customer123"),
-                "+91 9876543211",
-                "Flat 402, Green Valley Apartments, Mumbai",
-                Role.ROLE_CUSTOMER
-        );
-        userRepository.save(customer);
-
-        // 2. Seed Categories
+        // 1. Seed Categories
         Category catProduce = categoryRepository.save(new Category(
                 "Fresh Fruits & Vegetables",
                 "fruits-vegetables",
@@ -260,32 +257,7 @@ public class DataInitializer implements CommandLineRunner {
 
         productRepository.saveAll(products);
 
-        // 4. Seed an initial Order for customer
-        Order sampleOrder = new Order();
-        sampleOrder.setOrderNumber("ZZM-DEMO99");
-        sampleOrder.setUser(customer);
-        sampleOrder.setCustomerName(customer.getName());
-        sampleOrder.setCustomerEmail(customer.getEmail());
-        sampleOrder.setPhone(customer.getPhone());
-        sampleOrder.setShippingAddress(customer.getAddress());
-        sampleOrder.setCity("Mumbai");
-        sampleOrder.setPostalCode("400050");
-        sampleOrder.setDeliverySlot("Express 2-Hour");
-        sampleOrder.setPaymentMethod("UPI");
-        sampleOrder.setPaymentStatus("PAID");
-        sampleOrder.setStatus("SHIPPED");
-        sampleOrder.setOrderDate(LocalDateTime.now().minusHours(3));
-
-        OrderItem item1 = new OrderItem(sampleOrder, chicken, 2, chicken.getDiscountPrice(), chicken.getDiscountPrice().multiply(BigDecimal.valueOf(2)));
-        OrderItem item2 = new OrderItem(sampleOrder, eggs, 1, eggs.getDiscountPrice(), eggs.getDiscountPrice());
-        OrderItem item3 = new OrderItem(sampleOrder, basmati, 1, basmati.getDiscountPrice(), basmati.getDiscountPrice());
-
-        sampleOrder.setItems(List.of(item1, item2, item3));
-        sampleOrder.setTotalAmount(item1.getSubtotal().add(item2.getSubtotal()).add(item3.getSubtotal()));
-
-        orderRepository.save(sampleOrder);
-
-        System.out.println(">>> ZamZam Mart default data successfully initialized!");
+        System.out.println(">>> ZamZam Mart default data successfully initialized (Categories & Products ready, awaiting real customers)!");
     }
 }
 

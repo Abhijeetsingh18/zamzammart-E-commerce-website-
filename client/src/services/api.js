@@ -2,6 +2,32 @@
 
 const API_BASE = '/api';
 
+// Purge any legacy fake demo customer or mock order from local storage
+try {
+  const cachedUser = localStorage.getItem('zzm_user');
+  if (cachedUser) {
+    const u = JSON.parse(cachedUser);
+    if (u?.email?.toLowerCase() === 'customer@zamzammart.com' || u?.name === 'Amina Rahman' || (u?.email?.toLowerCase()?.endsWith('@zamzammart.com') && u?.role !== 'ROLE_ADMIN')) {
+      localStorage.removeItem('zzm_user');
+      localStorage.removeItem('zzm_token');
+    }
+  }
+  const cachedOrders = localStorage.getItem('zzm_recent_orders');
+  if (cachedOrders) {
+    const orders = JSON.parse(cachedOrders);
+    if (Array.isArray(orders)) {
+      const cleaned = orders.filter(o => 
+        o.orderNumber !== 'ZZM-DEMO99' && 
+        o.customerEmail !== 'customer@zamzammart.com' && 
+        o.customerName !== 'Amina Rahman'
+      );
+      localStorage.setItem('zzm_recent_orders', JSON.stringify(cleaned));
+    }
+  }
+} catch (e) {
+  // safe ignore
+}
+
 // Initial fallback mock data for offline resilience
 const FALLBACK_CATEGORIES = [
   { id: 1, name: 'Fresh Fruits & Vegetables', slug: 'fruits-vegetables', icon: 'Apple', imageUrl: 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=600&q=80' },
@@ -413,7 +439,11 @@ export const api = {
     } catch (err) {
       // Local fallback orders
       const local = JSON.parse(localStorage.getItem('zzm_recent_orders') || '[]');
-      return local;
+      return local.filter(ord => 
+        ord.orderNumber !== 'ZZM-DEMO99' && 
+        ord.customerEmail !== 'customer@zamzammart.com' && 
+        ord.customerName !== 'Amina Rahman'
+      );
     }
   },
 
@@ -465,17 +495,6 @@ export const api = {
             name: 'ZamZam Admin',
             email: 'zamzammart08@gmail.com',
             role: 'ROLE_ADMIN'
-          }
-        };
-      } else if (email === 'customer@zamzammart.com' && password === 'customer123') {
-        return {
-          success: true,
-          data: {
-            token: 'demo-customer-token',
-            id: 2,
-            name: 'Amina Rahman',
-            email: 'customer@zamzammart.com',
-            role: 'ROLE_CUSTOMER'
           }
         };
       }
@@ -812,7 +831,11 @@ export const api = {
       }
     });
 
-    const allOrders = Array.from(mergedMap.values());
+    const allOrders = Array.from(mergedMap.values()).filter(ord => 
+      ord.orderNumber !== 'ZZM-DEMO99' && 
+      ord.customerEmail !== 'customer@zamzammart.com' && 
+      ord.customerName !== 'Amina Rahman'
+    );
     allOrders.sort((a, b) => new Date(b.orderDate || 0) - new Date(a.orderDate || 0));
     return allOrders;
   },

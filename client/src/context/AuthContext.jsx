@@ -12,7 +12,14 @@ export function AuthProvider({ children }) {
     const token = localStorage.getItem('zzm_token');
     if (storedUser && token) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsed = JSON.parse(storedUser);
+        if (parsed?.email?.toLowerCase() === 'customer@zamzammart.com' || parsed?.name === 'Amina Rahman' || (parsed?.email?.toLowerCase()?.endsWith('@zamzammart.com') && parsed?.role !== 'ROLE_ADMIN')) {
+          localStorage.removeItem('zzm_user');
+          localStorage.removeItem('zzm_token');
+          setUser(null);
+        } else {
+          setUser(parsed);
+        }
       } catch (e) {
         localStorage.removeItem('zzm_user');
         localStorage.removeItem('zzm_token');

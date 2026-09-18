@@ -78,6 +78,15 @@ export default function AuthModal({
     e.preventDefault();
     setError('');
     setSuccessMsg('');
+
+    if (mode === 'register' && formData.phone) {
+      const cleanPhone = formData.phone.replace(/\D/g, '');
+      if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+        setError('Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9 (e.g. 9876543210).');
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -532,36 +541,55 @@ export default function AuthModal({
                   <span>Continue with Google / Gmail</span>
                 </button>
               ) : (
-                <div className="bg-slate-50 border border-emerald-200 p-3 rounded-2xl space-y-2 animate-fade-in">
+                <div className="bg-emerald-50/60 border border-emerald-200 p-4 rounded-2xl space-y-3 animate-fade-in">
                   <div className="flex justify-between items-center text-xs font-bold text-slate-800">
-                    <span className="flex items-center">
-                      <Mail className="w-3.5 h-3.5 mr-1 text-red-500" />
-                      Sign in with your Gmail
+                    <span className="flex items-center space-x-1.5">
+                      <Mail className="w-4 h-4 text-red-500" />
+                      <span>Continue with Google / Gmail</span>
                     </span>
                     <button
                       type="button"
                       onClick={() => setIsGooglePromptOpen(false)}
-                      className="text-slate-400 hover:text-slate-600 text-[10px]"
+                      className="text-slate-400 hover:text-slate-600 text-xs px-1.5 py-0.5"
                     >
                       Cancel
                     </button>
                   </div>
 
+                  <p className="text-[11px] text-slate-600 leading-tight">
+                    Enter your real Gmail address to sign in instantly. A welcoming greeting email with your 10% discount coupon (<span className="font-mono font-bold text-emerald-700">ZAMZAM10</span>) will be automatically sent from <span className="font-semibold text-emerald-800">zamzammart08@gmail.com</span>!
+                  </p>
+
+                  <input
+                    type="text"
+                    placeholder="Your Full Name (e.g. Rahul Sharma)"
+                    value={googleName}
+                    onChange={(e) => setGoogleName(e.target.value)}
+                    className="w-full text-xs px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none font-medium"
+                  />
+
                   <input
                     type="email"
-                    placeholder="Enter your Gmail address (e.g. yourname@gmail.com)"
+                    placeholder="yourname@gmail.com"
                     value={googleEmail}
                     onChange={(e) => setGoogleEmail(e.target.value)}
-                    className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 outline-none"
+                    className="w-full text-xs px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none font-medium"
                   />
 
                   <button
                     type="button"
                     onClick={() => handleGoogleLogin(googleEmail, googleName)}
                     disabled={loading || !googleEmail}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold py-2 rounded-xl transition-colors shadow-sm"
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-extrabold py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center space-x-2"
                   >
-                    {loading ? 'Signing in...' : 'Sign in with Gmail'}
+                    {/* Google SVG G Icon */}
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+                      <path fill="#ffffff" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#ffffff" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#ffffff" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                      <path fill="#ffffff" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                    </svg>
+                    <span>{loading ? 'Connecting Google / Gmail...' : 'Continue & Receive Welcome Email'}</span>
                   </button>
                 </div>
               )}
@@ -584,7 +612,7 @@ export default function AuthModal({
                       <input
                         type="text"
                         required
-                        placeholder="e.g. Amina Rahman"
+                        placeholder="e.g. Rahul Sharma"
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:border-emerald-500 outline-none"
@@ -593,17 +621,32 @@ export default function AuthModal({
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Phone Number</label>
-                    <div className="relative">
-                      <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                      Mobile Number (Indian 10-Digit)
+                    </label>
+                    <div className="flex rounded-xl shadow-sm border border-slate-200 bg-slate-50 focus-within:bg-white focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 overflow-hidden">
+                      <div className="flex items-center px-3 bg-slate-100 border-r border-slate-200 text-slate-700 font-bold text-xs select-none">
+                        <span className="mr-1 text-sm">🇮🇳</span>
+                        <span>+91</span>
+                      </div>
                       <input
                         type="tel"
-                        placeholder="+91 9876543210"
+                        placeholder="9876543210"
+                        maxLength={10}
                         value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:border-emerald-500 outline-none"
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/\D/g, '');
+                          const trimmed = raw.length > 10 ? raw.slice(raw.length - 10) : raw;
+                          setFormData({ ...formData, phone: trimmed });
+                        }}
+                        className="w-full text-xs px-3 py-2 bg-transparent border-0 outline-none font-semibold text-slate-800 placeholder:font-normal"
                       />
                     </div>
+                    {formData.phone && !/^[6-9]\d{9}$/.test(formData.phone) && (
+                      <p className="text-[10px] text-amber-600 mt-1 font-medium">
+                        Must be 10 digits starting with 6, 7, 8, or 9 ({formData.phone.length}/10 digits)
+                      </p>
+                    )}
                   </div>
                 </>
               )}
@@ -720,22 +763,14 @@ export default function AuthModal({
                     <p className="text-[10px] text-slate-300 mb-2.5 leading-tight">
                       Official Store Email: <span className="text-amber-300 font-bold">zamzammart08@gmail.com</span>
                     </p>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 gap-2">
                       <button
                         type="button"
                         onClick={() => fillAndLogin('zamzammart08@gmail.com', 'abhijeet@7890')}
-                        className="text-[11px] font-extrabold text-slate-950 bg-amber-400 hover:bg-amber-300 py-2 px-2 rounded-xl text-center transition-colors flex items-center justify-center space-x-1 shadow-sm"
+                        className="w-full text-[11px] font-extrabold text-slate-950 bg-amber-400 hover:bg-amber-300 py-2.5 px-3 rounded-xl text-center transition-colors flex items-center justify-center space-x-1.5 shadow-sm"
                       >
-                        <ShieldCheck className="w-3.5 h-3.5" />
-                        <span>Admin Login</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => fillAndLogin('customer@zamzammart.com', 'customer123')}
-                        className="text-[11px] font-bold text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2 px-2 rounded-xl text-center transition-colors flex items-center justify-center space-x-1 shadow-sm"
-                      >
-                        <User className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Customer Login</span>
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>Administrator Secure Login</span>
                       </button>
                     </div>
                   </div>
