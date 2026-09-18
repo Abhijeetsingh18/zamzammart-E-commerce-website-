@@ -34,6 +34,7 @@ public class Product {
     private Boolean isFeatured = false;
     private Double rating = 4.8;
     private Integer ratingCount = 24;
+    private Boolean isDeleted = false;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "category_id")
@@ -172,6 +173,14 @@ public class Product {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Boolean getIsDeleted() {
+        return isDeleted;
+    }
+
+    public void setIsDeleted(Boolean isDeleted) {
+        this.isDeleted = isDeleted;
     }
 }
 

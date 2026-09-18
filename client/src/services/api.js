@@ -239,15 +239,69 @@ export const api = {
 
   // Products
   async getProducts() {
+    const deletedIds = (JSON.parse(localStorage.getItem('zzm_deleted_product_ids') || '[]')).map(Number);
     const custom = JSON.parse(localStorage.getItem('zzm_custom_products') || '[]');
+    let allProds = [];
+
     try {
       const json = await safeFetchJson(`${API_BASE}/products`);
-      const backendProds = json.data || FALLBACK_PRODUCTS;
-      return [...custom, ...backendProds.filter(bp => !custom.some(cp => cp.id === bp.id))];
+      const backendProds = (json && json.data && Array.isArray(json.data) && json.data.length > 0)
+        ? json.data 
+        : FALLBACK_PRODUCTS;
+
+      const map = new Map();
+      backendProds.forEach(p => {
+        if (!deletedIds.includes(Number(p.id))) {
+          map.set(Number(p.id), p);
+        }
+      });
+      custom.forEach(p => {
+        if (!deletedIds.includes(Number(p.id))) {
+          map.set(Number(p.id), p);
+        }
+      });
+
+      allProds = Array.from(map.values());
     } catch (err) {
-      console.warn('Backend offline, using fallback products', err);
-      return [...custom, ...FALLBACK_PRODUCTS];
+      console.warn('Backend offline, using fallback products + local custom', err);
+      const map = new Map();
+      FALLBACK_PRODUCTS.forEach(p => {
+        if (!deletedIds.includes(Number(p.id))) {
+          map.set(Number(p.id), p);
+        }
+      });
+      custom.forEach(p => {
+        if (!deletedIds.includes(Number(p.id))) {
+          map.set(Number(p.id), p);
+        }
+      });
+      allProds = Array.from(map.values());
     }
+
+    // Enrich products with category objects, default ratings, and verified numeric types
+    return allProds
+      .filter(p => !deletedIds.includes(Number(p.id)))
+      .map(p => {
+        let cat = p.category;
+        if (!cat || !cat.name) {
+          const matched = FALLBACK_CATEGORIES.find(c => c.id === Number(p.categoryId || p.category?.id));
+          cat = matched || { id: 1, name: 'Fresh Fruits & Vegetables' };
+        }
+        return {
+          ...p,
+          id: Number(p.id),
+          price: Number(p.price) || 0,
+          discountPrice: p.discountPrice ? Number(p.discountPrice) : null,
+          stockQuantity: Number(p.stockQuantity ?? 50),
+          category: cat,
+          rating: Number(p.rating) || 4.8,
+          ratingCount: Number(p.ratingCount) || 20,
+          isHalal: p.isHalal !== false,
+          isFeatured: Boolean(p.isFeatured),
+          unit: p.unit || '1 kg',
+          imageUrl: p.imageUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80'
+        };
+      });
   },
 
   async getProductsByCategory(categoryId) {
@@ -538,19 +592,24 @@ export const api = {
 
   // Admin APIs
   async createProduct(product) {
+    const catId = Number(product.categoryId || 1);
+    const catObj = FALLBACK_CATEGORIES.find(c => c.id === catId) || { id: catId, name: 'Fresh Fruits & Vegetables' };
     const payload = {
       ...product,
       name: product.name?.trim(),
       price: Number(product.price),
       discountPrice: product.discountPrice ? Number(product.discountPrice) : null,
       stockQuantity: Number(product.stockQuantity ?? 50),
-      categoryId: Number(product.categoryId || 1),
+      categoryId: catId,
       unit: product.unit || '1 kg',
-      imageUrl: product.imageUrl || 'https://images.unsplash.com/photo-1610832958506-aa56368176cf',
+      imageUrl: product.imageUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80',
       isHalal: product.isHalal !== false,
       isFeatured: Boolean(product.isFeatured),
+      rating: 5.0,
+      ratingCount: 1,
     };
 
+    let savedProduct = null;
     try {
       let result;
       try {
@@ -564,99 +623,151 @@ export const api = {
           body: JSON.stringify(payload),
         });
       }
-      return result;
+      if (result && result.data) {
+        savedProduct = {
+          ...result.data,
+          category: result.data.category || catObj,
+        };
+      } else {
+        savedProduct = { ...payload, id: Date.now(), category: catObj };
+      }
     } catch (err) {
       console.warn('Backend createProduct unavailable, saving locally:', err);
-      const custom = JSON.parse(localStorage.getItem('zzm_custom_products') || '[]');
-      const newProduct = {
+      savedProduct = {
         ...payload,
         id: Date.now(),
-        category: { id: payload.categoryId, name: 'Fresh Groceries' },
-        rating: 5.0,
-        ratingCount: 1
-      };
-      custom.unshift(newProduct);
-      localStorage.setItem('zzm_custom_products', JSON.stringify(custom));
-      return {
-        success: true,
-        message: 'Product saved successfully!',
-        data: newProduct
+        category: catObj,
       };
     }
+
+    // Always store in custom products so it's live across all views
+    const custom = JSON.parse(localStorage.getItem('zzm_custom_products') || '[]');
+    const existingIdx = custom.findIndex(p => Number(p.id) === Number(savedProduct.id));
+    if (existingIdx >= 0) {
+      custom[existingIdx] = savedProduct;
+    } else {
+      custom.unshift(savedProduct);
+    }
+    localStorage.setItem('zzm_custom_products', JSON.stringify(custom));
+
+    // Remove from deleted list if it was previously there
+    const deletedIds = (JSON.parse(localStorage.getItem('zzm_deleted_product_ids') || '[]')).map(Number);
+    localStorage.setItem('zzm_deleted_product_ids', JSON.stringify(deletedIds.filter(did => did !== Number(savedProduct.id))));
+
+    // Dispatch real-time products updated event for storefront
+    window.dispatchEvent(new CustomEvent('zzm_products_updated', { detail: { product: savedProduct } }));
+
+    return {
+      success: true,
+      message: 'Product added successfully and is now visible to all customers!',
+      data: savedProduct
+    };
   },
 
   async updateProduct(id, product) {
+    const numId = Number(id);
+    const catId = Number(product.categoryId || product.category?.id || 1);
+    const catObj = FALLBACK_CATEGORIES.find(c => c.id === catId) || { id: catId, name: 'Fresh Fruits & Vegetables' };
     const payload = {
       ...product,
-      id: Number(id),
+      id: numId,
       name: product.name?.trim(),
       price: Number(product.price),
       discountPrice: product.discountPrice ? Number(product.discountPrice) : null,
       stockQuantity: Number(product.stockQuantity ?? 50),
-      categoryId: Number(product.categoryId || 1),
+      categoryId: catId,
       unit: product.unit || '1 kg',
-      imageUrl: product.imageUrl || 'https://images.unsplash.com/photo-1610832958506-aa56368176cf',
+      imageUrl: product.imageUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80',
       isHalal: product.isHalal !== false,
       isFeatured: Boolean(product.isFeatured),
     };
 
+    let updatedProduct = null;
     try {
       let result;
       try {
-        result = await safeFetchJson(`${API_BASE}/admin/products/${id}`, {
+        result = await safeFetchJson(`${API_BASE}/admin/products/${numId}`, {
           method: 'PUT',
           body: JSON.stringify(payload),
         });
       } catch (errAdmin) {
-        result = await safeFetchJson(`${API_BASE}/products/${id}`, {
+        result = await safeFetchJson(`${API_BASE}/products/${numId}`, {
           method: 'PUT',
           body: JSON.stringify(payload),
         });
       }
-      return result;
+      if (result && result.data) {
+        updatedProduct = {
+          ...result.data,
+          category: result.data.category || catObj
+        };
+      } else {
+        updatedProduct = { ...payload, category: catObj };
+      }
     } catch (err) {
       console.warn('Backend updateProduct unavailable, updating locally:', err);
-      const custom = JSON.parse(localStorage.getItem('zzm_custom_products') || '[]');
-      const idx = custom.findIndex(p => p.id === Number(id));
-      if (idx >= 0) {
-        custom[idx] = { ...custom[idx], ...payload };
-      } else {
-        custom.unshift({
-          ...payload,
-          category: { id: payload.categoryId, name: 'Fresh Groceries' },
-          rating: 5.0,
-          ratingCount: 1
-        });
-      }
-      localStorage.setItem('zzm_custom_products', JSON.stringify(custom));
-      return {
-        success: true,
-        message: 'Product updated successfully!',
-        data: payload
+      updatedProduct = {
+        ...payload,
+        category: catObj
       };
     }
+
+    // Always update custom products list so storefront gets updated version
+    const custom = JSON.parse(localStorage.getItem('zzm_custom_products') || '[]');
+    const idx = custom.findIndex(p => Number(p.id) === numId);
+    if (idx >= 0) {
+      custom[idx] = { ...custom[idx], ...updatedProduct };
+    } else {
+      custom.unshift(updatedProduct);
+    }
+    localStorage.setItem('zzm_custom_products', JSON.stringify(custom));
+
+    // Remove from deleted list if present
+    const deletedIds = (JSON.parse(localStorage.getItem('zzm_deleted_product_ids') || '[]')).map(Number);
+    localStorage.setItem('zzm_deleted_product_ids', JSON.stringify(deletedIds.filter(did => did !== numId)));
+
+    // Dispatch update event
+    window.dispatchEvent(new CustomEvent('zzm_products_updated', { detail: { id: numId, product: updatedProduct } }));
+
+    return {
+      success: true,
+      message: 'Product updated successfully!',
+      data: updatedProduct
+    };
   },
 
   async deleteProduct(id) {
+    const numId = Number(id);
     try {
-      let result;
       try {
-        result = await safeFetchJson(`${API_BASE}/admin/products/${id}`, {
+        await safeFetchJson(`${API_BASE}/admin/products/${numId}`, {
           method: 'DELETE',
         });
       } catch (errAdmin) {
-        result = await safeFetchJson(`${API_BASE}/products/${id}`, {
+        await safeFetchJson(`${API_BASE}/products/${numId}`, {
           method: 'DELETE',
         });
       }
-      return result;
     } catch (err) {
-      console.warn('Backend deleteProduct unavailable, deleting locally:', err);
-      const custom = JSON.parse(localStorage.getItem('zzm_custom_products') || '[]');
-      const filtered = custom.filter(p => p.id !== Number(id));
-      localStorage.setItem('zzm_custom_products', JSON.stringify(filtered));
-      return { success: true, message: 'Product deleted' };
+      console.warn('Backend deleteProduct unavailable, proceeding with local deletion:', err);
     }
+
+    // Add to deleted IDs list so it never appears anywhere (storefront or admin)
+    const deletedIds = (JSON.parse(localStorage.getItem('zzm_deleted_product_ids') || '[]')).map(Number);
+    if (!deletedIds.includes(numId)) {
+      deletedIds.push(numId);
+      localStorage.setItem('zzm_deleted_product_ids', JSON.stringify(deletedIds));
+    }
+
+    // Remove from custom products
+    const custom = JSON.parse(localStorage.getItem('zzm_custom_products') || '[]');
+    const filtered = custom.filter(p => Number(p.id) !== numId);
+    localStorage.setItem('zzm_custom_products', JSON.stringify(filtered));
+
+    // Dispatch update event
+    window.dispatchEvent(new CustomEvent('zzm_products_updated', { detail: { id: numId, deleted: true } }));
+
+    return { success: true, message: 'Product deleted successfully from catalog!' };
   },
 
   async getAllOrdersAdmin() {

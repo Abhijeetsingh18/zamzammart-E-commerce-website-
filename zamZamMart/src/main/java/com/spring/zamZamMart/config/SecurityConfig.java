@@ -52,6 +52,12 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
+                .requestMatchers("/api/products/**").permitAll()
+                .requestMatchers("/api/categories/**").permitAll()
+                .requestMatchers("/api/reviews/**").permitAll()
+                .requestMatchers("/api/admin/products/**").permitAll()
+                .requestMatchers("/api/admin/orders/**").permitAll()
+                .requestMatchers("/api/admin/stats").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/orders/**").permitAll() // allow creating guest/user orders

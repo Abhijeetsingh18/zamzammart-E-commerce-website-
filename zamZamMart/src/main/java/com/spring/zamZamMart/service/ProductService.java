@@ -21,24 +21,24 @@ public class ProductService {
     private CategoryRepository categoryRepository;
 
     public List<Product> getAllProducts() {
-        return productRepository.findAll();
+        return productRepository.findByIsDeletedFalse();
     }
 
     public Optional<Product> getProductById(Long id) {
-        return productRepository.findById(id);
+        return productRepository.findById(id).filter(p -> p.getIsDeleted() == null || !p.getIsDeleted());
     }
 
     public List<Product> getProductsByCategory(Long categoryId) {
-        return productRepository.findByCategoryId(categoryId);
+        return productRepository.findByCategoryIdAndIsDeletedFalse(categoryId);
     }
 
     public List<Product> getFeaturedProducts() {
-        return productRepository.findByIsFeaturedTrue();
+        return productRepository.findByIsFeaturedTrueAndIsDeletedFalse();
     }
 
     public List<Product> searchProducts(String query) {
         if (query == null || query.trim().isEmpty()) {
-            return productRepository.findAll();
+            return getAllProducts();
         }
         return productRepository.searchProducts(query.trim());
     }
@@ -58,12 +58,24 @@ public class ProductService {
         product.setImageUrl(dto.getImageUrl());
         product.setIsHalal(dto.getIsHalal() != null ? dto.getIsHalal() : true);
         product.setIsFeatured(dto.getIsFeatured() != null ? dto.getIsFeatured() : false);
-        product.setRating(dto.getRating() != null ? dto.getRating() : 4.8);
-        product.setRatingCount(dto.getRatingCount() != null ? dto.getRatingCount() : 1);
+        product.setIsDeleted(false);
+
+        // Preserve rating if not supplied
+        if (dto.getRating() != null) {
+            product.setRating(dto.getRating());
+        } else if (product.getRating() == null) {
+            product.setRating(4.8);
+        }
+
+        if (dto.getRatingCount() != null) {
+            product.setRatingCount(dto.getRatingCount());
+        } else if (product.getRatingCount() == null) {
+            product.setRatingCount(20);
+        }
 
         if (dto.getCategoryId() != null) {
             Category category = categoryRepository.findById(dto.getCategoryId())
-                    .orElseThrow(() -> new RuntimeException("Category not found with id: " + dto.getCategoryId()));
+                    .orElseGet(() -> categoryRepository.findAll().stream().findFirst().orElse(null));
             product.setCategory(category);
         }
 
@@ -71,7 +83,11 @@ public class ProductService {
     }
 
     public void deleteProduct(Long id) {
-        productRepository.deleteById(id);
+        productRepository.findById(id).ifPresent(p -> {
+            p.setIsDeleted(true);
+            p.setStockQuantity(0);
+            productRepository.save(p);
+        });
     }
 }
 

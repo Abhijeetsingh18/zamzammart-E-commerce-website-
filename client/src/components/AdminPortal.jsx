@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, Plus, Trash2, Edit2, CheckCircle2, TrendingUp, Package, AlertTriangle, 
   DollarSign, ShoppingBag, ShieldCheck, Layers, Search, RefreshCw, Printer, 
@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 
-export default function AdminPortal({ isOpen, onClose, categories, onDataChanged }) {
+export default function AdminPortal({ isOpen, onClose, categories = [], onDataChanged }) {
   const [activeTab, setActiveTab] = useState('orders'); // default to 'orders' since user requested working orders!
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -15,6 +15,7 @@ export default function AdminPortal({ isOpen, onClose, categories, onDataChanged
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [copiedOrderId, setCopiedOrderId] = useState(null);
+  const formRef = useRef(null);
 
   // Orders Tab filters & search
   const [orderSearch, setOrderSearch] = useState('');
@@ -25,6 +26,7 @@ export default function AdminPortal({ isOpen, onClose, categories, onDataChanged
   // Form for new/edit product
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [savingProduct, setSavingProduct] = useState(false);
   const [productForm, setProductForm] = useState({
     name: '',
     description: '',
@@ -44,15 +46,24 @@ export default function AdminPortal({ isOpen, onClose, categories, onDataChanged
     }
   }, [isOpen]);
 
-  // Listen for real-time order updates from other components
+  // Listen for real-time order & product updates from other components/tabs
   useEffect(() => {
     const handleOrderEvent = () => {
       if (isOpen) {
         loadAllAdminData(true);
       }
     };
+    const handleProductEvent = () => {
+      if (isOpen) {
+        loadAllAdminData(true);
+      }
+    };
     window.addEventListener('zzm_orders_updated', handleOrderEvent);
-    return () => window.removeEventListener('zzm_orders_updated', handleOrderEvent);
+    window.addEventListener('zzm_products_updated', handleProductEvent);
+    return () => {
+      window.removeEventListener('zzm_orders_updated', handleOrderEvent);
+      window.removeEventListener('zzm_products_updated', handleProductEvent);
+    };
   }, [isOpen]);
 
   const loadAllAdminData = async (silent = false) => {
@@ -100,15 +111,18 @@ export default function AdminPortal({ isOpen, onClose, categories, onDataChanged
         return;
       }
 
+      setSavingProduct(true);
+      const chosenCatId = parseInt(productForm.categoryId, 10) || (categories[0]?.id || 1);
       const payload = {
         ...productForm,
         name: productForm.name.trim(),
         price: priceNum,
         discountPrice: productForm.discountPrice ? parseFloat(productForm.discountPrice) : null,
         stockQuantity: parseInt(productForm.stockQuantity, 10) || 50,
-        categoryId: parseInt(productForm.categoryId, 10) || (categories[0]?.id || 1),
+        categoryId: chosenCatId,
       };
 
+      const wasEditing = Boolean(editingId);
       if (editingId) {
         await api.updateProduct(editingId, payload);
       } else {
@@ -118,19 +132,30 @@ export default function AdminPortal({ isOpen, onClose, categories, onDataChanged
       setIsFormOpen(false);
       setEditingId(null);
       await loadAllAdminData();
-      if (onDataChanged) onDataChanged();
+      if (onDataChanged) await onDataChanged();
+
+      alert(wasEditing 
+        ? `Product "${payload.name}" updated successfully and is live on customer storefront!`
+        : `New product "${payload.name}" added successfully and is live on customer storefront!`
+      );
     } catch (err) {
       console.error('Failed to save product:', err);
       alert('Failed to save product: ' + (err.message || 'Unknown error occurred. Please check backend connection.'));
+    } finally {
+      setSavingProduct(false);
     }
   };
 
-  const handleDeleteProduct = async (id) => {
-    if (confirm('Are you sure you want to delete this product?')) {
+  const handleDeleteProduct = async (p) => {
+    const targetId = typeof p === 'object' ? p.id : p;
+    const targetName = typeof p === 'object' ? p.name : ('ID #' + p);
+
+    if (confirm(`Are you sure you want to delete "${targetName}"? It will be removed from both Admin Portal and Customer Storefront.`)) {
       try {
-        await api.deleteProduct(id);
-        loadAllAdminData();
-        if (onDataChanged) onDataChanged();
+        await api.deleteProduct(targetId);
+        await loadAllAdminData();
+        if (onDataChanged) await onDataChanged();
+        alert(`"${targetName}" was successfully removed from catalog and storefront.`);
       } catch (err) {
         alert('Failed to delete product: ' + err.message);
       }
@@ -140,18 +165,22 @@ export default function AdminPortal({ isOpen, onClose, categories, onDataChanged
   const handleEditClick = (p) => {
     setEditingId(p.id);
     setProductForm({
-      name: p.name,
+      name: p.name || '',
       description: p.description || '',
-      price: p.price,
+      price: p.price || '',
       discountPrice: p.discountPrice || '',
       unit: p.unit || '1 kg',
       stockQuantity: p.stockQuantity || 50,
       imageUrl: p.imageUrl || '',
       isHalal: p.isHalal ?? true,
       isFeatured: p.isFeatured ?? false,
-      categoryId: p.category?.id || categories[0]?.id || 1
+      categoryId: p.category?.id || p.categoryId || categories[0]?.id || 1
     });
     setIsFormOpen(true);
+    setActiveTab('inventory');
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
   };
 
   const handleUpdateOrderStatus = async (orderIdentifier, newStatus) => {
@@ -687,121 +716,165 @@ export default function AdminPortal({ isOpen, onClose, categories, onDataChanged
 
               {/* Add/Edit Product Modal Form */}
               {isFormOpen && (
-                <form onSubmit={handleSaveProduct} className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-3">
-                  <h5 className="font-bold text-xs text-slate-800">
-                    {editingId ? 'Edit Product' : 'Add New Grocery Product'}
-                  </h5>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
-                    <div>
-                      <label className="font-bold text-slate-600 block mb-1">Product Name</label>
-                      <input
-                        type="text"
-                        required
-                        value={productForm.name}
-                        onChange={e => setProductForm({ ...productForm, name: e.target.value })}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl"
-                      />
-                    </div>
-                    <div>
-                      <label className="font-bold text-slate-600 block mb-1">Category</label>
-                      <select
-                        value={productForm.categoryId}
-                        onChange={e => setProductForm({ ...productForm, categoryId: e.target.value })}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl"
+                <div ref={formRef} className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-3">
+                  {editingId && (
+                    <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 flex items-center justify-between animate-fade-in">
+                      <div className="flex items-center space-x-2">
+                        <Edit2 className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                        <span className="text-xs font-black text-amber-900">
+                          Currently Editing: <span className="underline">{productForm.name || 'Product'}</span> (ID #{editingId})
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingId(null);
+                          setIsFormOpen(false);
+                        }}
+                        className="text-xs font-bold text-amber-800 hover:text-amber-950 underline ml-2"
                       >
-                        {categories.map(c => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                      </select>
+                        Cancel Edit
+                      </button>
                     </div>
-                    <div>
-                      <label className="font-bold text-slate-600 block mb-1">Price (₹)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        required
-                        value={productForm.price}
-                        onChange={e => setProductForm({ ...productForm, price: e.target.value })}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl"
-                      />
-                    </div>
-                    <div>
-                      <label className="font-bold text-slate-600 block mb-1">Discount Price (₹)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={productForm.discountPrice}
-                        onChange={e => setProductForm({ ...productForm, discountPrice: e.target.value })}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl"
-                      />
-                    </div>
-                    <div>
-                      <label className="font-bold text-slate-600 block mb-1">Unit / Weight</label>
-                      <input
-                        type="text"
-                        value={productForm.unit}
-                        onChange={e => setProductForm({ ...productForm, unit: e.target.value })}
-                        placeholder="1 kg, 500 g, 1 dozen"
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl"
-                      />
-                    </div>
-                    <div>
-                      <label className="font-bold text-slate-600 block mb-1">Stock Quantity</label>
-                      <input
-                        type="number"
-                        value={productForm.stockQuantity}
-                        onChange={e => setProductForm({ ...productForm, stockQuantity: e.target.value })}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl"
-                      />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <label className="font-bold text-slate-600 block mb-1">Image URL (Unsplash or direct)</label>
-                      <input
-                        type="url"
-                        value={productForm.imageUrl}
-                        onChange={e => setProductForm({ ...productForm, imageUrl: e.target.value })}
-                        placeholder="https://..."
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl"
-                      />
-                    </div>
-                    <div className="flex items-center space-x-4 pt-4">
-                      <label className="flex items-center space-x-1.5 cursor-pointer font-bold text-slate-700">
-                        <input
-                          type="checkbox"
-                          checked={productForm.isHalal}
-                          onChange={e => setProductForm({ ...productForm, isHalal: e.target.checked })}
-                          className="rounded text-emerald-600"
-                        />
-                        <span>ZamZam Certified</span>
-                      </label>
-                      <label className="flex items-center space-x-1.5 cursor-pointer font-bold text-slate-700">
-                        <input
-                          type="checkbox"
-                          checked={productForm.isFeatured}
-                          onChange={e => setProductForm({ ...productForm, isFeatured: e.target.checked })}
-                          className="rounded text-emerald-600"
-                        />
-                        <span>Featured</span>
-                      </label>
-                    </div>
-                  </div>
+                  )}
 
-                  <div className="flex justify-end space-x-2 pt-3">
-                    <button
-                      type="button"
-                      onClick={() => setIsFormOpen(false)}
-                      className="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl font-bold"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-5 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 shadow-md"
-                    >
-                      Save Product
-                    </button>
-                  </div>
-                </form>
+                  <h5 className="font-bold text-xs text-slate-800 flex items-center justify-between">
+                    <span>{editingId ? 'Edit Product Details' : 'Add New Grocery Product'}</span>
+                    <span className="text-[10px] text-slate-400 font-normal">Changes reflect live on customer portal</span>
+                  </h5>
+
+                  <form onSubmit={handleSaveProduct} className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+                      <div>
+                        <label className="font-bold text-slate-600 block mb-1">Product Name *</label>
+                        <input
+                          type="text"
+                          required
+                          value={productForm.name}
+                          onChange={e => setProductForm({ ...productForm, name: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold text-slate-600 block mb-1">Category *</label>
+                        <select
+                          value={productForm.categoryId}
+                          onChange={e => setProductForm({ ...productForm, categoryId: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 outline-none cursor-pointer"
+                        >
+                          {(categories && categories.length > 0 ? categories : [
+                            { id: 1, name: 'Fresh Fruits & Vegetables' },
+                            { id: 2, name: 'ZamZam Meats & Poultry' },
+                            { id: 3, name: 'Dairy & Farm Eggs' },
+                            { id: 4, name: 'Bakery & Delights' },
+                            { id: 5, name: 'Rice, Spices & Pantry' },
+                            { id: 6, name: 'Dates, Nuts & Dry Fruits' },
+                            { id: 7, name: 'Beverages & Refreshments' }
+                          ]).map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="font-bold text-slate-600 block mb-1">Price (₹) *</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          required
+                          value={productForm.price}
+                          onChange={e => setProductForm({ ...productForm, price: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold text-slate-600 block mb-1">Discount Price (₹)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={productForm.discountPrice}
+                          onChange={e => setProductForm({ ...productForm, discountPrice: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold text-slate-600 block mb-1">Unit / Weight</label>
+                        <input
+                          type="text"
+                          value={productForm.unit}
+                          onChange={e => setProductForm({ ...productForm, unit: e.target.value })}
+                          placeholder="1 kg, 500 g, 1 dozen"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold text-slate-600 block mb-1">Stock Quantity</label>
+                        <input
+                          type="number"
+                          value={productForm.stockQuantity}
+                          onChange={e => setProductForm({ ...productForm, stockQuantity: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 outline-none"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="font-bold text-slate-600 block mb-1">Image URL (Unsplash or direct)</label>
+                        <input
+                          type="url"
+                          value={productForm.imageUrl}
+                          onChange={e => setProductForm({ ...productForm, imageUrl: e.target.value })}
+                          placeholder="https://..."
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 outline-none"
+                        />
+                      </div>
+                      <div className="flex items-center space-x-4 pt-4">
+                        <label className="flex items-center space-x-1.5 cursor-pointer font-bold text-slate-700">
+                          <input
+                            type="checkbox"
+                            checked={productForm.isHalal}
+                            onChange={e => setProductForm({ ...productForm, isHalal: e.target.checked })}
+                            className="rounded text-emerald-600 cursor-pointer"
+                          />
+                          <span>ZamZam Certified</span>
+                        </label>
+                        <label className="flex items-center space-x-1.5 cursor-pointer font-bold text-slate-700">
+                          <input
+                            type="checkbox"
+                            checked={productForm.isFeatured}
+                            onChange={e => setProductForm({ ...productForm, isFeatured: e.target.checked })}
+                            className="rounded text-emerald-600 cursor-pointer"
+                          />
+                          <span>Featured on Home</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end space-x-2 pt-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsFormOpen(false);
+                          setEditingId(null);
+                        }}
+                        className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={savingProduct}
+                        className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl font-bold shadow-md transition-all flex items-center space-x-1.5"
+                      >
+                        {savingProduct ? (
+                          <>
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            <span>Saving Product...</span>
+                          </>
+                        ) : (
+                          <span>{editingId ? 'Update Product in Store & Catalog' : 'Add Product to Storefront'}</span>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                </div>
               )}
 
               {/* Product list table */}
@@ -855,7 +928,7 @@ export default function AdminPortal({ isOpen, onClose, categories, onDataChanged
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => handleDeleteProduct(p.id)}
+                            onClick={() => handleDeleteProduct(p)}
                             className="p-1.5 text-slate-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
                             title="Delete"
                           >

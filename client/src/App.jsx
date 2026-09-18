@@ -111,8 +111,25 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const loadStoreData = async () => {
-    setLoading(true);
+  useEffect(() => {
+    const handleProductUpdate = () => {
+      loadStoreData(true);
+    };
+    window.addEventListener('zzm_products_updated', handleProductUpdate);
+    const handleStorage = (e) => {
+      if (e.key === 'zzm_custom_products' || e.key === 'zzm_deleted_product_ids') {
+        loadStoreData(true);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('zzm_products_updated', handleProductUpdate);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
+
+  const loadStoreData = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [cats, prods] = await Promise.all([
         api.getCategories(),
@@ -123,14 +140,14 @@ export default function App() {
     } catch (err) {
       console.error('Failed to load store data', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   // Filter and sort products
   const filteredProducts = products.filter(p => {
-    // Category filter
-    if (selectedCategory && p.category?.id !== selectedCategory.id) {
+    // Category filter (string-safe comparison)
+    if (selectedCategory && String(p.category?.id) !== String(selectedCategory.id)) {
       return false;
     }
     // ZamZam filter
@@ -149,7 +166,7 @@ export default function App() {
     // Search query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      const matchName = p.name.toLowerCase().includes(q);
+      const matchName = p.name?.toLowerCase().includes(q);
       const matchDesc = p.description?.toLowerCase().includes(q);
       const matchCat = p.category?.name?.toLowerCase().includes(q);
       if (!matchName && !matchDesc && !matchCat) return false;
@@ -168,8 +185,12 @@ export default function App() {
       const discB = b.discountPrice ? ((b.price - b.discountPrice) / b.price) : 0;
       return discB - discA;
     }
-    if (sortBy === 'newest') return (b.id || 0) - (a.id || 0);
-    return (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
+    if (sortBy === 'newest') return (Number(b.id) || 0) - (Number(a.id) || 0);
+    
+    // Default featured: featured first, then newest first
+    const featDiff = (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
+    if (featDiff !== 0) return featDiff;
+    return (Number(b.id) || 0) - (Number(a.id) || 0);
   });
 
   return (
