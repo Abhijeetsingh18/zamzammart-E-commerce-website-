@@ -38,6 +38,14 @@ export default function CustomerPortal({ isOpen, onClose, initialOrderNumber = n
         setActiveTab('track');
       }
     }
+
+    const handleOrderEvent = () => {
+      if (isOpen) {
+        loadOrders();
+      }
+    };
+    window.addEventListener('zzm_orders_updated', handleOrderEvent);
+    return () => window.removeEventListener('zzm_orders_updated', handleOrderEvent);
   }, [isOpen, initialOrderNumber]);
 
   const loadOrders = async () => {

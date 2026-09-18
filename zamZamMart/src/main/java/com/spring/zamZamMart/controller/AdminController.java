@@ -52,13 +52,13 @@ public class AdminController {
         return ResponseEntity.ok(new ApiResponse(true, "All orders retrieved", orders));
     }
 
-    @PutMapping("/orders/{id}/status")
-    public ResponseEntity<?> updateOrderStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
+    @PutMapping("/orders/{orderIdentifier}/status")
+    public ResponseEntity<?> updateOrderStatus(@PathVariable String orderIdentifier, @RequestBody Map<String, String> body) {
         String status = body.get("status");
         if (status == null || status.trim().isEmpty()) {
             return ResponseEntity.badRequest().body(new ApiResponse(false, "Status is required"));
         }
-        Order updated = orderService.updateOrderStatus(id, status);
+        Order updated = orderService.updateOrderStatus(orderIdentifier, status);
         return ResponseEntity.ok(new ApiResponse(true, "Order status updated to " + status, updated));
     }
 

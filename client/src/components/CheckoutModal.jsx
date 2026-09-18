@@ -163,8 +163,36 @@ export default function CheckoutModal({ isOpen, onClose, onOrderSuccess }) {
   };
 
   const saveOrderLocally = (order) => {
+    const fullItems = (!order.items || order.items.length === 0 || !order.items[0].product)
+      ? cartItems.map(ci => ({
+          id: ci.product.id,
+          product: ci.product,
+          quantity: ci.quantity,
+          unitPrice: ci.product.discountPrice || ci.product.price,
+          subtotal: (ci.product.discountPrice || ci.product.price) * ci.quantity
+        }))
+      : order.items;
+
+    const normalizedOrder = {
+      ...order,
+      customerName: order.customerName || formData.customerName,
+      customerEmail: order.customerEmail || formData.customerEmail,
+      phone: order.phone || formData.phone,
+      shippingAddress: order.shippingAddress || formData.shippingAddress,
+      city: order.city || formData.city || 'Mumbai',
+      postalCode: order.postalCode || formData.postalCode || '400001',
+      deliverySlot: order.deliverySlot || formData.deliverySlot || 'Express 2-Hour',
+      paymentMethod: order.paymentMethod || formData.paymentMethod || 'COD',
+      items: fullItems
+    };
+
     const existing = JSON.parse(localStorage.getItem('zzm_recent_orders') || '[]');
-    localStorage.setItem('zzm_recent_orders', JSON.stringify([order, ...existing]));
+    const filtered = existing.filter(o => o.orderNumber !== normalizedOrder.orderNumber);
+    localStorage.setItem('zzm_recent_orders', JSON.stringify([normalizedOrder, ...filtered]));
+
+    window.dispatchEvent(new CustomEvent('zzm_orders_updated', { 
+      detail: { orderIdentifier: normalizedOrder.orderNumber, status: normalizedOrder.status } 
+    }));
   };
 
   const handleSubmitOrder = async (e) => {

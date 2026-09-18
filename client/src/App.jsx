@@ -18,10 +18,12 @@ import Footer from './components/Footer';
 import MobileNavDock from './components/MobileNavDock';
 import DeviceCustomizer from './components/DeviceCustomizer';
 import { useDevice } from './context/DeviceContext';
+import { useCart } from './context/CartContext';
 import { api } from './services/api';
 
 export default function App() {
   const { isMobile, isTablet, isDesktop, activeDevice, showDeviceFrame } = useDevice();
+  const { addToCart } = useCart();
 
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
@@ -30,8 +32,10 @@ export default function App() {
   // Filters & State
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('featured'); // 'featured', 'price-low', 'price-high', 'rating'
+  const [sortBy, setSortBy] = useState('featured'); // 'featured', 'popularity', 'price-low', 'price-high', 'rating', 'discount', 'newest'
   const [zamzamOnly, setZamzamOnly] = useState(false);
+  const [ratingFilter, setRatingFilter] = useState(null); // null or 4
+  const [discountFilter, setDiscountFilter] = useState(null); // null or 20
 
   // Modals state
   const [activeProductModal, setActiveProductModal] = useState(null);
@@ -41,6 +45,13 @@ export default function App() {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [successOrder, setSuccessOrder] = useState(null);
+
+  // Instant Flipkart "Buy Now" handler
+  const handleBuyNow = (product, quantity = 1) => {
+    addToCart(product, quantity);
+    setActiveProductModal(null);
+    setIsCheckoutOpen(true);
+  };
 
   // Reset password URL query params
   const [initialResetToken, setInitialResetToken] = useState(null);
@@ -126,6 +137,15 @@ export default function App() {
     if (zamzamOnly && !p.isHalal) {
       return false;
     }
+    // Rating filter (4★ & above)
+    if (ratingFilter && (p.rating || 0) < ratingFilter) {
+      return false;
+    }
+    // Discount filter (20%+ off)
+    if (discountFilter) {
+      const disc = p.discountPrice ? Math.round(((p.price - p.discountPrice) / p.price) * 100) : 0;
+      if (disc < discountFilter) return false;
+    }
     // Search query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -142,6 +162,13 @@ export default function App() {
     if (sortBy === 'price-low') return priceA - priceB;
     if (sortBy === 'price-high') return priceB - priceA;
     if (sortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
+    if (sortBy === 'popularity') return (b.ratingCount || 0) - (a.ratingCount || 0);
+    if (sortBy === 'discount') {
+      const discA = a.discountPrice ? ((a.price - a.discountPrice) / a.price) : 0;
+      const discB = b.discountPrice ? ((b.price - b.discountPrice) / b.price) : 0;
+      return discB - discA;
+    }
+    if (sortBy === 'newest') return (b.id || 0) - (a.id || 0);
     return (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
   });
 
@@ -193,7 +220,7 @@ export default function App() {
             </div>
 
             {/* Controls */}
-            <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
               
               {/* ZamZam only filter */}
               <button
@@ -205,7 +232,32 @@ export default function App() {
                 }`}
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>100% ZamZam Only</span>
+                <span>100% ZamZam</span>
+              </button>
+
+              {/* 4★ & above filter */}
+              <button
+                onClick={() => setRatingFilter(ratingFilter ? null : 4)}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                  ratingFilter
+                    ? 'bg-[#388e3c] text-white border-[#388e3c] shadow-sm'
+                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>4★ & Above</span>
+              </button>
+
+              {/* 20%+ OFF filter */}
+              <button
+                onClick={() => setDiscountFilter(discountFilter ? null : 20)}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                  discountFilter
+                    ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-sm font-black'
+                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                <span>20%+ OFF</span>
               </button>
 
               {/* Sort By dropdown */}
@@ -214,12 +266,15 @@ export default function App() {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-1.5 focus:bg-white focus:border-emerald-500 outline-none text-xs font-bold"
+                  className="bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-1.5 focus:bg-white focus:border-emerald-500 outline-none text-xs font-bold cursor-pointer"
                 >
                   <option value="featured">Featured / Best Match</option>
+                  <option value="popularity">Popularity</option>
                   <option value="price-low">Price: Low to High</option>
                   <option value="price-high">Price: High to Low</option>
-                  <option value="rating">Highest Rated</option>
+                  <option value="rating">Customer Rating (4★+)</option>
+                  <option value="discount">Biggest Discount (% OFF)</option>
+                  <option value="newest">Newest Arrivals</option>
                 </select>
               </div>
             </div>
@@ -253,6 +308,8 @@ export default function App() {
                   setSelectedCategory(null);
                   setSearchQuery('');
                   setZamzamOnly(false);
+                  setRatingFilter(null);
+                  setDiscountFilter(null);
                 }}
                 className="mt-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors"
               >
@@ -266,6 +323,7 @@ export default function App() {
                   key={product.id}
                   product={product}
                   onOpenDetail={setActiveProductModal}
+                  onBuyNow={handleBuyNow}
                 />
               ))}
             </div>
@@ -291,6 +349,9 @@ export default function App() {
       <ProductModal
         product={activeProductModal}
         onClose={() => setActiveProductModal(null)}
+        onBuyNow={handleBuyNow}
+        onOpenProduct={setActiveProductModal}
+        allProducts={products}
       />
 
       {/* Checkout Modal */}

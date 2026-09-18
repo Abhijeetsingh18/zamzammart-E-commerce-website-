@@ -121,5 +121,23 @@ public class OrderService {
         }
         return orderRepository.save(order);
     }
+
+    public Order updateOrderStatus(String orderIdentifier, String status) {
+        Order order = null;
+        try {
+            Long id = Long.parseLong(orderIdentifier);
+            order = orderRepository.findById(id).orElse(null);
+        } catch (NumberFormatException ignored) {
+        }
+        if (order == null) {
+            order = orderRepository.findByOrderNumber(orderIdentifier)
+                    .orElseThrow(() -> new RuntimeException("Order not found with identifier: " + orderIdentifier));
+        }
+        order.setStatus(status.toUpperCase());
+        if ("DELIVERED".equalsIgnoreCase(status)) {
+            order.setPaymentStatus("PAID");
+        }
+        return orderRepository.save(order);
+    }
 }
 

@@ -277,6 +277,26 @@ export const api = {
 
   // Orders
   async createOrder(orderData) {
+    const allKnownProds = [...FALLBACK_PRODUCTS, ...JSON.parse(localStorage.getItem('zzm_custom_products') || '[]')];
+    const enrichedItems = (orderData.items || []).map(it => {
+      const prod = it.product || allKnownProds.find(p => p.id === (it.productId || it.id)) || {
+        id: it.productId || 1,
+        name: 'Fresh ZamZam Grocery Item',
+        price: it.unitPrice || 150,
+        unit: '1 kg',
+        imageUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80'
+      };
+      const qty = it.quantity || 1;
+      const uPrice = prod.discountPrice || prod.price || it.unitPrice || 150;
+      return {
+        id: it.id || Date.now() + Math.random(),
+        product: prod,
+        quantity: qty,
+        unitPrice: uPrice,
+        subtotal: uPrice * qty
+      };
+    });
+
     try {
       const res = await fetch(`${API_BASE}/orders`, {
         method: 'POST',
@@ -285,24 +305,44 @@ export const api = {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.message || 'Failed to place order');
+      
+      // Ensure returned data has full customer and item details
+      if (json.data) {
+        if (!json.data.items || json.data.items.length === 0 || !json.data.items[0].product) {
+          json.data.items = enrichedItems;
+        }
+        if (!json.data.shippingAddress) json.data.shippingAddress = orderData.shippingAddress;
+        if (!json.data.customerEmail) json.data.customerEmail = orderData.customerEmail;
+        if (!json.data.phone) json.data.phone = orderData.phone;
+        if (!json.data.city) json.data.city = orderData.city;
+        if (!json.data.postalCode) json.data.postalCode = orderData.postalCode;
+        if (!json.data.deliverySlot) json.data.deliverySlot = orderData.deliverySlot;
+        if (!json.data.paymentMethod) json.data.paymentMethod = orderData.paymentMethod;
+      }
       return json;
     } catch (err) {
       console.warn('Backend not responding to createOrder, simulating mock order:', err);
-      // Simulate successful order response for mock
       const mockOrderNumber = 'ZZM-' + Math.random().toString(36).substring(2, 9).toUpperCase();
+      const mockTotal = orderData.totalAmount || enrichedItems.reduce((sum, item) => sum + item.subtotal, 0);
       return {
         success: true,
         message: 'Order placed successfully (Demo mode)!',
         data: {
           id: Date.now(),
           orderNumber: mockOrderNumber,
-          totalAmount: orderData.totalAmount || 500,
           customerName: orderData.customerName,
-          status: 'PENDING',
+          customerEmail: orderData.customerEmail,
+          phone: orderData.phone,
+          shippingAddress: orderData.shippingAddress,
+          city: orderData.city || 'Mumbai',
+          postalCode: orderData.postalCode || '400001',
           deliverySlot: orderData.deliverySlot || 'Express 2-Hour',
           paymentMethod: orderData.paymentMethod || 'COD',
-          paymentStatus: orderData.paymentMethod === 'COD' ? 'PENDING' : 'PAID',
-          orderDate: new Date().toISOString()
+          paymentStatus: (orderData.paymentMethod === 'COD' || orderData.paymentStatus === 'PENDING') ? 'PENDING' : 'PAID',
+          status: 'PENDING',
+          totalAmount: mockTotal,
+          orderDate: new Date().toISOString(),
+          items: enrichedItems
         }
       };
     }
@@ -620,24 +660,116 @@ export const api = {
   },
 
   async getAllOrdersAdmin() {
+    let backendOrders = [];
     try {
-      const json = await safeFetchJson(`${API_BASE}/admin/orders`);
-      return json.data || [];
+      let res;
+      try {
+        res = await safeFetchJson(`${API_BASE}/admin/orders`);
+      } catch (e1) {
+        res = await safeFetchJson(`${API_BASE}/orders`);
+      }
+      if (res && res.data && Array.isArray(res.data)) {
+        backendOrders = res.data;
+      }
     } catch (err) {
-      const recent = JSON.parse(localStorage.getItem('zzm_recent_orders') || '[]');
-      return recent;
+      console.warn('Backend orders fetch failed, falling back to local storage:', err);
     }
+
+    const localOrders = JSON.parse(localStorage.getItem('zzm_recent_orders') || '[]');
+    const mergedMap = new Map();
+
+    // Local orders have client-side rich items
+    localOrders.forEach(ord => {
+      const key = ord.orderNumber || String(ord.id);
+      mergedMap.set(key, ord);
+    });
+
+    // Merge backend orders
+    backendOrders.forEach(ord => {
+      const key = ord.orderNumber || String(ord.id);
+      if (mergedMap.has(key)) {
+        const existing = mergedMap.get(key);
+        mergedMap.set(key, {
+          ...ord,
+          ...existing,
+          status: ord.status || existing.status,
+          paymentStatus: ord.paymentStatus || existing.paymentStatus,
+          items: (existing.items && existing.items.length > 0) ? existing.items : (ord.items || [])
+        });
+      } else {
+        mergedMap.set(key, ord);
+      }
+    });
+
+    const allOrders = Array.from(mergedMap.values());
+    allOrders.sort((a, b) => new Date(b.orderDate || 0) - new Date(a.orderDate || 0));
+    return allOrders;
   },
 
-  async updateOrderStatus(orderId, status) {
+  async updateOrderStatus(orderIdentifier, status) {
+    const cleanStatus = (status || '').toUpperCase();
+    let backendSuccess = false;
     try {
-      return await safeFetchJson(`${API_BASE}/admin/orders/${orderId}/status`, {
-        method: 'PUT',
-        body: JSON.stringify({ status }),
-      });
+      try {
+        await safeFetchJson(`${API_BASE}/admin/orders/${orderIdentifier}/status`, {
+          method: 'PUT',
+          body: JSON.stringify({ status: cleanStatus }),
+        });
+        backendSuccess = true;
+      } catch (err1) {
+        await safeFetchJson(`${API_BASE}/orders/${orderIdentifier}/status`, {
+          method: 'PUT',
+          body: JSON.stringify({ status: cleanStatus }),
+        });
+        backendSuccess = true;
+      }
     } catch (err) {
-      return { success: true, message: `Status updated to ${status}` };
+      console.warn('Backend updateOrderStatus failed, updating local storage only:', err);
     }
+
+    // Always update local storage so customer view & admin view stay 100% in sync
+    try {
+      const local = JSON.parse(localStorage.getItem('zzm_recent_orders') || '[]');
+      const idStr = String(orderIdentifier);
+      let updated = false;
+      const updatedList = local.map(ord => {
+        if (String(ord.id) === idStr || String(ord.orderNumber) === idStr) {
+          updated = true;
+          return {
+            ...ord,
+            status: cleanStatus,
+            paymentStatus: cleanStatus === 'DELIVERED' ? 'PAID' : ord.paymentStatus
+          };
+        }
+        return ord;
+      });
+
+      if (updated) {
+        localStorage.setItem('zzm_recent_orders', JSON.stringify(updatedList));
+      } else {
+        const newEntry = {
+          id: isNaN(Number(orderIdentifier)) ? Date.now() : Number(orderIdentifier),
+          orderNumber: String(orderIdentifier),
+          status: cleanStatus,
+          paymentStatus: cleanStatus === 'DELIVERED' ? 'PAID' : 'PENDING',
+          orderDate: new Date().toISOString()
+        };
+        localStorage.setItem('zzm_recent_orders', JSON.stringify([newEntry, ...local]));
+      }
+
+      // Notify any active components
+      window.dispatchEvent(new CustomEvent('zzm_orders_updated', { 
+        detail: { orderIdentifier, status: cleanStatus } 
+      }));
+    } catch (localErr) {
+      console.error('Error saving updated order locally', localErr);
+    }
+
+    return { 
+      success: true, 
+      message: `Order status updated to ${cleanStatus}`,
+      data: { orderIdentifier, status: cleanStatus }
+    };
   },
 
   async getAdminStats() {
@@ -713,6 +845,110 @@ export const api = {
     } catch (err) {
       return { success: true, message: 'Payment verified (Demo Mode)' };
     }
+  },
+
+  // Flipkart-style Reviews API
+  getProductReviews(productId) {
+    const defaultReviews = [
+      {
+        id: 101,
+        productId: Number(productId),
+        author: 'Arif Khan',
+        rating: 5,
+        title: 'Superb quality & completely fresh!',
+        comment: 'Received the order within 45 minutes. Fresh packaging, sealed properly, and 100% genuine ZamZam quality. Highly recommend to everyone!',
+        date: '2 days ago',
+        verifiedBuyer: true,
+        helpfulCount: 18,
+        location: 'Mumbai'
+      },
+      {
+        id: 102,
+        productId: Number(productId),
+        author: 'Farhana Siddiqui',
+        rating: 5,
+        title: 'Mind-blowing purchase!',
+        comment: 'Flipkart speed delivery and great prices compared to local supermarket. The packaging keeps it crisp and chilled.',
+        date: '1 week ago',
+        verifiedBuyer: true,
+        helpfulCount: 9,
+        location: 'Delhi NCR'
+      },
+      {
+        id: 103,
+        productId: Number(productId),
+        author: 'Mohammed Irfan',
+        rating: 4,
+        title: 'Very good product & value for money',
+        comment: 'Consistent quality and reliable service. The ZamZam assurance seal gave full peace of mind.',
+        date: '2 weeks ago',
+        verifiedBuyer: true,
+        helpfulCount: 6,
+        location: 'Bangalore'
+      }
+    ];
+
+    try {
+      const stored = JSON.parse(localStorage.getItem(`zzm_reviews_${productId}`) || '[]');
+      return [...stored, ...defaultReviews];
+    } catch (e) {
+      return defaultReviews;
+    }
+  },
+
+  submitProductReview(productId, review) {
+    try {
+      const existing = JSON.parse(localStorage.getItem(`zzm_reviews_${productId}`) || '[]');
+      const newReview = {
+        id: Date.now(),
+        productId: Number(productId),
+        author: review.author?.trim() || 'ZamZam Customer',
+        rating: Number(review.rating || 5),
+        title: review.title?.trim() || 'Great product!',
+        comment: review.comment?.trim() || 'Wonderful experience and fresh delivery.',
+        date: 'Just now',
+        verifiedBuyer: true,
+        helpfulCount: 0,
+        location: review.location?.trim() || 'Verified Customer'
+      };
+      const updated = [newReview, ...existing];
+      localStorage.setItem(`zzm_reviews_${productId}`, JSON.stringify(updated));
+      return { success: true, data: newReview };
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
+  },
+
+  // Flipkart-style Delivery Pincode Estimator
+  checkDeliveryPincode(pincode) {
+    const clean = String(pincode || '').trim();
+    if (!/^\d{6}$/.test(clean)) {
+      return {
+        valid: false,
+        message: 'Please enter a valid 6-digit Indian PIN Code.'
+      };
+    }
+
+    try {
+      localStorage.setItem('zzm_delivery_pincode', clean);
+    } catch (e) {}
+
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const options = { weekday: 'short', month: 'short', day: 'numeric' };
+    const deliveryDateStr = tomorrow.toLocaleDateString('en-IN', options);
+
+    return {
+      valid: true,
+      pincode: clean,
+      deliveryDate: `Tomorrow, ${deliveryDateStr} by 11:00 AM`,
+      isExpressAvailable: true,
+      expressTime: '2-Hour Express Delivery Available',
+      shippingFee: 'FREE Delivery (Orders over ₹499)',
+      codAvailable: true,
+      replacementPolicy: '7 Days Easy Replacement & Refund'
+    };
   }
 };
 

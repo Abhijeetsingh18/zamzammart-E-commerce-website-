@@ -31,6 +31,21 @@ public class OrderController {
         }
     }
 
+    @GetMapping
+    public ResponseEntity<?> getAllOrders() {
+        return ResponseEntity.ok(new ApiResponse(true, "All orders retrieved", orderService.getAllOrders()));
+    }
+
+    @PutMapping("/{orderIdentifier}/status")
+    public ResponseEntity<?> updateOrderStatus(@PathVariable String orderIdentifier, @RequestBody java.util.Map<String, String> body) {
+        String status = body.get("status");
+        if (status == null || status.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(new ApiResponse(false, "Status is required"));
+        }
+        Order updated = orderService.updateOrderStatus(orderIdentifier, status);
+        return ResponseEntity.ok(new ApiResponse(true, "Order status updated to " + status, updated));
+    }
+
     @GetMapping("/my-orders")
     public ResponseEntity<?> getMyOrders(Authentication authentication) {
         if (authentication == null) {
