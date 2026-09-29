@@ -8,6 +8,7 @@ import com.spring.zamZamMart.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,6 +44,14 @@ public class ProductService {
         return productRepository.searchProducts(query.trim());
     }
 
+    public List<Product> filterProducts(String search, Long categoryId, String brand, BigDecimal minPrice, BigDecimal maxPrice, Boolean isHalal, Boolean inStockOnly) {
+        return productRepository.findAll(ProductSpecification.filter(search, categoryId, brand, minPrice, maxPrice, isHalal, inStockOnly));
+    }
+
+    public List<String> getDistinctBrands() {
+        return productRepository.findDistinctBrands();
+    }
+
     public Product saveProduct(ProductDTO dto) {
         Product product = new Product();
         if (dto.getId() != null) {
@@ -53,14 +62,17 @@ public class ProductService {
         product.setDescription(dto.getDescription());
         product.setPrice(dto.getPrice());
         product.setDiscountPrice(dto.getDiscountPrice());
-        product.setUnit(dto.getUnit());
+        product.setUnit(dto.getUnit() != null ? dto.getUnit() : "1 kg");
+        product.setWeight(dto.getWeight() != null ? dto.getWeight() : dto.getUnit());
+        product.setBrand(dto.getBrand() != null ? dto.getBrand() : "ZamZam Fresh");
+        product.setSku(dto.getSku() != null ? dto.getSku() : "ZZM-SKU-" + System.currentTimeMillis() % 100000);
+        product.setExpiryDate(dto.getExpiryDate());
         product.setStockQuantity(dto.getStockQuantity() != null ? dto.getStockQuantity() : 50);
         product.setImageUrl(dto.getImageUrl());
         product.setIsHalal(dto.getIsHalal() != null ? dto.getIsHalal() : true);
         product.setIsFeatured(dto.getIsFeatured() != null ? dto.getIsFeatured() : false);
         product.setIsDeleted(false);
 
-        // Preserve rating if not supplied
         if (dto.getRating() != null) {
             product.setRating(dto.getRating());
         } else if (product.getRating() == null) {
@@ -90,4 +102,3 @@ public class ProductService {
         });
     }
 }
-

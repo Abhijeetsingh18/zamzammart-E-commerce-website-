@@ -27,12 +27,12 @@ export default function CartDrawer({ onProceedToCheckout }) {
 
   if (!isCartOpen) return null;
 
-  const handleApplyPromo = (e) => {
+  const handleApplyPromo = async (e) => {
     e.preventDefault();
     setPromoError('');
     if (!inputCode.trim()) return;
 
-    const res = applyPromo(inputCode);
+    const res = await applyPromo(inputCode);
     if (!res.success) {
       setPromoError(res.message);
     }

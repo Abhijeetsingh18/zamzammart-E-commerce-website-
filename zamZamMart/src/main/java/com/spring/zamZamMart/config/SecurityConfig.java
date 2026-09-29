@@ -52,16 +52,22 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/reviews/**").permitAll()
                 .requestMatchers("/api/products/**").permitAll()
                 .requestMatchers("/api/categories/**").permitAll()
-                .requestMatchers("/api/reviews/**").permitAll()
-                .requestMatchers("/api/admin/products/**").permitAll()
-                .requestMatchers("/api/admin/orders/**").permitAll()
-                .requestMatchers("/api/admin/stats").permitAll()
+                .requestMatchers("/api/coupons/validate").permitAll()
+                .requestMatchers("/api/flash-sales/current").permitAll()
+                .requestMatchers("/api/recommendations/**").permitAll()
+                .requestMatchers("/api/ai/**").permitAll()
+                .requestMatchers("/api/orders/**").permitAll()
+                .requestMatchers("/api/payment/**").permitAll()
+                .requestMatchers("/api/users/addresses/**", "/api/addresses/**").permitAll()
+                .requestMatchers("/api/notifications/**").permitAll()
+                .requestMatchers("/api/returns/**").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/orders/**").permitAll() // allow creating guest/user orders
-                .requestMatchers("/api/payment/**").permitAll() // allow payment order creation & verification
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+                // Admin specific paths
+                .requestMatchers("/api/admin/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex
@@ -95,4 +101,3 @@ public class SecurityConfig {
         return source;
     }
 }
-

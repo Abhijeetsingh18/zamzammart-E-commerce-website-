@@ -2,23 +2,17 @@ package com.spring.zamZamMart.service;
 
 import com.spring.zamZamMart.dto.OrderItemRequest;
 import com.spring.zamZamMart.dto.OrderRequest;
-import com.spring.zamZamMart.entity.Order;
-import com.spring.zamZamMart.entity.OrderItem;
-import com.spring.zamZamMart.entity.Product;
-import com.spring.zamZamMart.entity.User;
-import com.spring.zamZamMart.repository.OrderRepository;
-import com.spring.zamZamMart.repository.ProductRepository;
-import com.spring.zamZamMart.repository.UserRepository;
+import com.spring.zamZamMart.entity.*;
+import com.spring.zamZamMart.exception.BadRequestException;
+import com.spring.zamZamMart.exception.ResourceNotFoundException;
+import com.spring.zamZamMart.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class OrderService {
@@ -35,59 +29,107 @@ public class OrderService {
     @Autowired
     private EmailService emailService;
 
+    @Autowired
+    private CouponService couponService;
+
+    @Autowired
+    private InventoryService inventoryService;
+
+    @Autowired
+    private OrderStatusHistoryRepository orderStatusHistoryRepository;
+
     @Transactional
     public Order createOrder(OrderRequest request, String userEmail) {
+        String effectiveEmail = userEmail != null ? userEmail : request.getCustomerEmail();
+        User user = null;
+        if (effectiveEmail != null) {
+            user = userRepository.findByEmail(effectiveEmail).orElse(null);
+        }
+
+        String orderNumber = "ZZM-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+
         Order order = new Order();
-        order.setOrderNumber("ZZM-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+        order.setOrderNumber(orderNumber);
+        order.setUser(user);
         order.setCustomerName(request.getCustomerName());
-        String effectiveEmail = (userEmail != null && !userEmail.trim().isEmpty()) 
-                ? userEmail.trim() 
-                : (request.getCustomerEmail() != null ? request.getCustomerEmail().trim() : null);
         order.setCustomerEmail(effectiveEmail);
         order.setPhone(request.getPhone());
         order.setShippingAddress(request.getShippingAddress());
-        order.setCity(request.getCity());
-        order.setPostalCode(request.getPostalCode());
-        order.setDeliverySlot(request.getDeliverySlot() != null ? request.getDeliverySlot() : "Express 2-Hour");
+        order.setCity(request.getCity() != null ? request.getCity() : "Mumbai");
+        order.setPostalCode(request.getPostalCode() != null ? request.getPostalCode() : "400001");
+        order.setDeliverySlot(request.getDeliverySlot() != null ? request.getDeliverySlot() : "Morning (8 AM - 12 PM)");
         order.setPaymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "COD");
         order.setPaymentStatus("COD".equalsIgnoreCase(request.getPaymentMethod()) ? "PENDING" : "PAID");
         order.setStatus("PENDING");
         order.setOrderDate(LocalDateTime.now());
 
-        if (userEmail != null) {
-            userRepository.findByEmail(userEmail).ifPresent(order::setUser);
-        }
-
-        BigDecimal total = BigDecimal.ZERO;
+        BigDecimal subtotalSum = BigDecimal.ZERO;
         List<OrderItem> items = new ArrayList<>();
 
         for (OrderItemRequest itemReq : request.getItems()) {
             Product product = productRepository.findById(itemReq.getProductId())
-                    .orElseThrow(() -> new RuntimeException("Product not found with id: " + itemReq.getProductId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + itemReq.getProductId()));
 
-            BigDecimal price = product.getDiscountPrice() != null ? product.getDiscountPrice() : product.getPrice();
-            BigDecimal subtotal = price.multiply(BigDecimal.valueOf(itemReq.getQuantity()));
-            total = total.add(subtotal);
-
-            // Deduct stock
-            if (product.getStockQuantity() >= itemReq.getQuantity()) {
-                product.setStockQuantity(product.getStockQuantity() - itemReq.getQuantity());
-                productRepository.save(product);
+            if (product.getStockQuantity() == null || product.getStockQuantity() < itemReq.getQuantity()) {
+                throw new BadRequestException("Insufficient stock for product: " + product.getName() +
+                        ". Available: " + (product.getStockQuantity() != null ? product.getStockQuantity() : 0));
             }
 
-            OrderItem orderItem = new OrderItem(order, product, itemReq.getQuantity(), price, subtotal);
+            product.setStockQuantity(product.getStockQuantity() - itemReq.getQuantity());
+            productRepository.save(product);
+
+            if (inventoryService != null) {
+                inventoryService.recordTransaction(product, -itemReq.getQuantity(), "ORDER_DEDUCTION", "Deducted for Order " + orderNumber);
+            }
+
+            BigDecimal unitPrice = product.getDiscountPrice() != null ? product.getDiscountPrice() : product.getPrice();
+            BigDecimal itemSubtotal = unitPrice.multiply(BigDecimal.valueOf(itemReq.getQuantity()));
+            subtotalSum = subtotalSum.add(itemSubtotal);
+
+            OrderItem orderItem = new OrderItem(order, product, itemReq.getQuantity(), unitPrice);
             items.add(orderItem);
         }
 
         order.setItems(items);
+        order.setSubtotal(subtotalSum);
+
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        String couponCode = request.getCouponCode();
+        if (couponCode != null && !couponCode.trim().isEmpty() && couponService != null) {
+            try {
+                Map<String, Object> cRes = couponService.validateCoupon(couponCode, subtotalSum, effectiveEmail);
+                if (Boolean.TRUE.equals(cRes.get("valid"))) {
+                    discountAmount = (BigDecimal) cRes.get("discountAmount");
+                    order.setCouponCode(couponCode.trim().toUpperCase());
+                    order.setDiscountAmount(discountAmount);
+                    couponService.recordCouponUsage(couponCode, effectiveEmail, null);
+                }
+            } catch (Exception ignored) {}
+        }
+
+        BigDecimal deliveryFee = BigDecimal.ZERO;
+        if (subtotalSum.compareTo(new BigDecimal("499.00")) < 0 && !"FREESHIP".equalsIgnoreCase(order.getCouponCode())) {
+            deliveryFee = new BigDecimal("40.00");
+        }
+        order.setDeliveryFee(deliveryFee);
+
+        BigDecimal total = subtotalSum.subtract(discountAmount != null ? discountAmount : BigDecimal.ZERO)
+                .max(BigDecimal.ZERO)
+                .add(deliveryFee);
         order.setTotalAmount(total);
 
         Order savedOrder = orderRepository.save(order);
+
+        if (orderStatusHistoryRepository != null) {
+            try {
+                OrderStatusHistory hist = new OrderStatusHistory(savedOrder, "PENDING", "Order received and confirmed in store");
+                orderStatusHistoryRepository.save(hist);
+            } catch (Exception ignored) {}
+        }
+
         try {
             emailService.sendOrderConfirmationEmail(savedOrder);
-        } catch (Exception e) {
-            // Non-blocking email dispatch
-        }
+        } catch (Exception ignored) {}
 
         return savedOrder;
     }
@@ -114,12 +156,8 @@ public class OrderService {
 
     public Order updateOrderStatus(Long orderId, String status) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
-        order.setStatus(status.toUpperCase());
-        if ("DELIVERED".equalsIgnoreCase(status)) {
-            order.setPaymentStatus("PAID");
-        }
-        return orderRepository.save(order);
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+        return applyStatusChange(order, status);
     }
 
     public Order updateOrderStatus(String orderIdentifier, String status) {
@@ -127,17 +165,67 @@ public class OrderService {
         try {
             Long id = Long.parseLong(orderIdentifier);
             order = orderRepository.findById(id).orElse(null);
-        } catch (NumberFormatException ignored) {
-        }
+        } catch (NumberFormatException ignored) {}
+
         if (order == null) {
             order = orderRepository.findByOrderNumber(orderIdentifier)
-                    .orElseThrow(() -> new RuntimeException("Order not found with identifier: " + orderIdentifier));
+                    .orElseThrow(() -> new ResourceNotFoundException("Order not found with identifier: " + orderIdentifier));
         }
-        order.setStatus(status.toUpperCase());
-        if ("DELIVERED".equalsIgnoreCase(status)) {
+        return applyStatusChange(order, status);
+    }
+
+    private Order applyStatusChange(Order order, String status) {
+        String clean = status.toUpperCase();
+        order.setStatus(clean);
+        if ("DELIVERED".equalsIgnoreCase(clean)) {
             order.setPaymentStatus("PAID");
         }
-        return orderRepository.save(order);
+        Order saved = orderRepository.save(order);
+
+        if (orderStatusHistoryRepository != null) {
+            try {
+                OrderStatusHistory hist = new OrderStatusHistory(saved, clean, "Status updated to " + clean);
+                orderStatusHistoryRepository.save(hist);
+            } catch (Exception ignored) {}
+        }
+
+        return saved;
+    }
+
+    @Transactional
+    public Order cancelOrder(Long orderId, String reason) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+
+        if ("DELIVERED".equalsIgnoreCase(order.getStatus()) || "CANCELLED".equalsIgnoreCase(order.getStatus())) {
+            throw new BadRequestException("Cannot cancel order with status: " + order.getStatus());
+        }
+
+        order.setStatus("CANCELLED");
+        order.setCancellationReason(reason != null ? reason : "Cancelled by customer");
+
+        if (order.getItems() != null) {
+            for (OrderItem item : order.getItems()) {
+                Product p = item.getProduct();
+                if (p != null) {
+                    p.setStockQuantity((p.getStockQuantity() != null ? p.getStockQuantity() : 0) + item.getQuantity());
+                    productRepository.save(p);
+                    if (inventoryService != null) {
+                        inventoryService.recordTransaction(p, item.getQuantity(), "RETURN", "Stock returned due to cancellation of Order " + order.getOrderNumber());
+                    }
+                }
+            }
+        }
+
+        Order saved = orderRepository.save(order);
+
+        if (orderStatusHistoryRepository != null) {
+            try {
+                OrderStatusHistory hist = new OrderStatusHistory(saved, "CANCELLED", "Order cancelled: " + order.getCancellationReason());
+                orderStatusHistoryRepository.save(hist);
+            } catch (Exception ignored) {}
+        }
+
+        return saved;
     }
 }
-

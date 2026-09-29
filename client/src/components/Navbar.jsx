@@ -8,8 +8,12 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useDevice } from '../context/DeviceContext';
+import { useLanguage } from '../context/LanguageContext';
+import NotificationBell from './NotificationBell';
+import { Bot } from 'lucide-react';
 
-export default function Navbar({ 
+export default function Navbar({
+  onOpenAi, 
   categories, 
   selectedCategory, 
   onSelectCategory, 
@@ -24,6 +28,7 @@ export default function Navbar({
   const { totalItemCount, total, setIsCartOpen } = useCart();
   const { wishlist } = useWishlist();
   const { activeDevice, deviceMode, setIsCustomizerOpen } = useDevice();
+  const { language, toggleLanguage, t } = useLanguage();
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -56,6 +61,15 @@ export default function Navbar({
             </span>
           </div>
           <div className="flex items-center space-x-2.5">
+            <button 
+              type="button"
+              onClick={toggleLanguage}
+              className="flex items-center text-amber-200 hover:text-white transition-colors bg-amber-400/20 hover:bg-amber-400/30 px-2.5 py-0.5 rounded-full font-bold text-[11px] border border-amber-400/30 shadow-sm"
+              title="Switch Language / भाषा बदलें"
+            >
+              <span>{language === 'en' ? '🇮🇳 हिंदी' : '🇬🇧 English'}</span>
+            </button>
+            <span className="hidden sm:inline-block text-emerald-300">|</span>
             <button 
               type="button"
               onClick={() => setIsCustomizerOpen(true)}
@@ -129,6 +143,19 @@ export default function Navbar({
           {/* Right Action Icons */}
           <div className="flex items-center space-x-3 sm:space-x-4">
             
+            {/* AI Assistant Button */}
+            <button
+              onClick={onOpenAi}
+              className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black text-xs shadow-md shadow-amber-400/20 transition-all hover:scale-105"
+              title="Open AI Grocery Assistant"
+            >
+              <Bot className="w-3.5 h-3.5 text-slate-950" />
+              <span>AI Assistant</span>
+            </button>
+
+            {/* Notification Bell */}
+            <NotificationBell />
+
             {/* Wishlist Button */}
             <button 
               onClick={onOpenWishlist}

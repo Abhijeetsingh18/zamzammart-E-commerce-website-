@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 
 export default function CheckoutModal({ isOpen, onClose, onOrderSuccess }) {
-  const { cartItems, total, subtotal, deliveryFee, discountAmount, clearCart } = useCart();
+  const { cartItems, total, subtotal, deliveryFee, discountAmount, promoCode, clearCart } = useCart();
   const { user } = useAuth();
 
   const [formData, setFormData] = useState({
@@ -231,6 +231,7 @@ export default function CheckoutModal({ isOpen, onClose, onOrderSuccess }) {
       postalCode: formData.postalCode,
       deliverySlot: formData.deliverySlot,
       paymentMethod: formData.paymentMethod,
+      couponCode: promoCode || '',
       totalAmount: total,
       items: cartItems.map(item => ({
         productId: item.product.id,

@@ -3,6 +3,8 @@ package com.spring.zamZamMart.controller;
 import com.spring.zamZamMart.dto.ApiResponse;
 import com.spring.zamZamMart.dto.OrderRequest;
 import com.spring.zamZamMart.entity.Order;
+import com.spring.zamZamMart.entity.OrderStatusHistory;
+import com.spring.zamZamMart.repository.OrderStatusHistoryRepository;
 import com.spring.zamZamMart.service.OrderService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +13,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -19,6 +22,9 @@ public class OrderController {
 
     @Autowired
     private OrderService orderService;
+
+    @Autowired
+    private OrderStatusHistoryRepository orderStatusHistoryRepository;
 
     @PostMapping
     public ResponseEntity<?> createOrder(@Valid @RequestBody OrderRequest request, Authentication authentication) {
@@ -37,7 +43,7 @@ public class OrderController {
     }
 
     @PutMapping("/{orderIdentifier}/status")
-    public ResponseEntity<?> updateOrderStatus(@PathVariable String orderIdentifier, @RequestBody java.util.Map<String, String> body) {
+    public ResponseEntity<?> updateOrderStatus(@PathVariable String orderIdentifier, @RequestBody Map<String, String> body) {
         String status = body.get("status");
         if (status == null || status.trim().isEmpty()) {
             return ResponseEntity.badRequest().body(new ApiResponse(false, "Status is required"));
@@ -68,5 +74,17 @@ public class OrderController {
                 .<ResponseEntity<?>>map(order -> ResponseEntity.ok(new ApiResponse(true, "Order tracked successfully", order)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
-}
 
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<?> cancelOrder(@PathVariable Long id, @RequestBody(required = false) Map<String, String> body) {
+        String reason = (body != null && body.containsKey("reason")) ? body.get("reason") : "Customer cancelled order";
+        Order cancelled = orderService.cancelOrder(id, reason);
+        return ResponseEntity.ok(new ApiResponse(true, "Order cancelled successfully and stock returned", cancelled));
+    }
+
+    @GetMapping("/{id}/history")
+    public ResponseEntity<?> getOrderHistory(@PathVariable Long id) {
+        List<OrderStatusHistory> history = orderStatusHistoryRepository.findByOrderIdOrderByTimestampAsc(id);
+        return ResponseEntity.ok(new ApiResponse(true, "Order timeline history", history));
+    }
+}

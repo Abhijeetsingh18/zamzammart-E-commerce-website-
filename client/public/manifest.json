@@ -1,0 +1,8 @@
+{
+  "short_name": "ZamZam Mart",
+  "name": "ZamZam Mart - Grocery Supermarket",
+  "start_url": "/",
+  "background_color": "#ffffff",
+  "theme_color": "#064e3b",
+  "display": "standalone"
+}

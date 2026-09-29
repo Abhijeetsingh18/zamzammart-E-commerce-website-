@@ -17,6 +17,9 @@ import WishlistModal from './components/WishlistModal';
 import Footer from './components/Footer';
 import MobileNavDock from './components/MobileNavDock';
 import DeviceCustomizer from './components/DeviceCustomizer';
+import FlashSaleBanner from './components/FlashSaleBanner';
+import AiAssistantModal from './components/AiAssistantModal';
+import { Bot } from 'lucide-react';
 import { useDevice } from './context/DeviceContext';
 import { useCart } from './context/CartContext';
 import { api } from './services/api';
@@ -44,6 +47,7 @@ export default function App() {
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
+  const [isAiOpen, setIsAiOpen] = useState(false);
   const [successOrder, setSuccessOrder] = useState(null);
 
   // Instant Flipkart "Buy Now" handler
@@ -206,7 +210,11 @@ export default function App() {
         onOpenOrders={() => setIsOrdersOpen(true)}
         onOpenAdmin={() => setIsAdminOpen(true)}
         onOpenWishlist={() => setIsWishlistOpen(true)}
+        onOpenAi={() => setIsAiOpen(true)}
       />
+
+      {/* Live Flash Sale Banner with Real-time Countdown */}
+      <FlashSaleBanner />
 
       {/* Main Storefront Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -431,6 +439,25 @@ export default function App() {
         onOpenAuth={() => setIsAuthOpen(true)}
         onOpenOrders={() => setIsOrdersOpen(true)}
       />
+
+      {/* AI Assistant Modal */}
+      <AiAssistantModal
+        isOpen={isAiOpen}
+        onClose={() => setIsAiOpen(false)}
+      />
+
+      {/* Floating AI Grocery Solver Button */}
+      <button
+        onClick={() => setIsAiOpen(true)}
+        className="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-emerald-600 via-emerald-700 to-emerald-800 text-white p-3.5 sm:px-5 sm:py-3.5 rounded-full shadow-2xl hover:shadow-emerald-600/40 hover:scale-105 active:scale-95 transition-all flex items-center space-x-2 font-black text-sm border-2 border-amber-300 group"
+        title="Open AI Grocery Assistant"
+      >
+        <Bot className="w-5 h-5 text-amber-300 animate-pulse" />
+        <span className="hidden sm:inline font-bold">AI Grocery Solver</span>
+        <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-1.5 py-0.5 rounded-full">
+          New
+        </span>
+      </button>
 
       {/* Interactive Multi-Device Customizer Center & Trigger */}
       <DeviceCustomizer />
